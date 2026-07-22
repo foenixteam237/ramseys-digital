@@ -124,6 +124,11 @@ const rackItems: Array<{ label: string; leds: string[] }> = [
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    contact: "",
+    need: "",
+  });
 
   useEffect(() => {
     const revealEls = document.querySelectorAll<HTMLElement>(".reveal");
@@ -453,7 +458,7 @@ export default function Home() {
               </div>
 
               <div className="mt-10 flex items-center gap-4">
-                <a href="#" aria-label="Facebook" className="flex h-10 w-10 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60 hover:text-rd-red">
+                <a href="https://www.facebook.com/share/1Cga7KWbce/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-10 w-10 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60 hover:text-rd-red">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V5.5h-3C11.8 5.5 10 7.3 10 9.5V12H8v3.5h2V21h3.5v-5.5H16l.5-3.5h-3V9.7c0-.5.3-.7.5-.7Z" /></svg>
                 </a>
                 <a href="https://wa.me/237657828457" aria-label="WhatsApp" className="flex h-10 w-10 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60 hover:text-rd-red">
@@ -469,20 +474,48 @@ export default function Home() {
               className="reveal space-y-5 rounded-2xl border border-rd-line bg-rd-graphite p-8"
               onSubmit={(event) => {
                 event.preventDefault();
+
+                const subject = encodeURIComponent(`Demande de devis - ${formData.name}`);
+                const body = encodeURIComponent(
+                  `Nom complet : ${formData.name}\nEmail ou téléphone : ${formData.contact}\n\nVotre besoin :\n${formData.need}`,
+                );
+
+                window.location.href = `mailto:ramseysdigital@gmail.com?subject=${subject}&body=${body}`;
                 setSubmitted(true);
               }}
             >
               <div>
                 <label className="mb-2 block text-xs font-mono text-white/40">Nom complet</label>
-                <input required type="text" className="w-full rounded-lg border border-rd-line bg-rd-deep px-4 py-3 text-sm transition-colors focus:border-rd-red focus:outline-none" placeholder="Votre nom" />
+                <input
+                  required
+                  type="text"
+                  value={formData.name}
+                  onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))}
+                  className="w-full rounded-lg border border-rd-line bg-rd-deep px-4 py-3 text-sm transition-colors focus:border-rd-red focus:outline-none"
+                  placeholder="Votre nom"
+                />
               </div>
               <div>
                 <label className="mb-2 block text-xs font-mono text-white/40">Email ou téléphone</label>
-                <input required type="text" className="w-full rounded-lg border border-rd-line bg-rd-deep px-4 py-3 text-sm transition-colors focus:border-rd-red focus:outline-none" placeholder="vous@exemple.com" />
+                <input
+                  required
+                  type="text"
+                  value={formData.contact}
+                  onChange={(event) => setFormData((current) => ({ ...current, contact: event.target.value }))}
+                  className="w-full rounded-lg border border-rd-line bg-rd-deep px-4 py-3 text-sm transition-colors focus:border-rd-red focus:outline-none"
+                  placeholder="vous@exemple.com"
+                />
               </div>
               <div>
                 <label className="mb-2 block text-xs font-mono text-white/40">Votre besoin</label>
-                <textarea required rows={4} className="w-full rounded-lg border border-rd-line bg-rd-deep px-4 py-3 text-sm transition-colors focus:border-rd-red focus:outline-none" placeholder="Décrivez votre projet ou votre demande" />
+                <textarea
+                  required
+                  rows={4}
+                  value={formData.need}
+                  onChange={(event) => setFormData((current) => ({ ...current, need: event.target.value }))}
+                  className="w-full rounded-lg border border-rd-line bg-rd-deep px-4 py-3 text-sm transition-colors focus:border-rd-red focus:outline-none"
+                  placeholder="Décrivez votre projet ou votre demande"
+                />
               </div>
               <button type="submit" className="btn-primary w-full rounded-lg py-3.5 font-semibold text-white transition-transform hover:scale-[1.02]">
                 Envoyer la demande
@@ -535,7 +568,7 @@ export default function Home() {
           <div>
             <p className="mb-4 font-mono text-xs uppercase tracking-widest text-white/40">Suivez-nous</p>
             <div className="flex gap-3">
-              <a href="#" className="flex h-9 w-9 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60">
+              <a href="https://www.facebook.com/share/1Cga7KWbce/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V5.5h-3C11.8 5.5 10 7.3 10 9.5V12H8v3.5h2V21h3.5v-5.5H16l.5-3.5h-3V9.7c0-.5.3-.7.5-.7Z" /></svg>
               </a>
               <a href="https://wa.me/237657828457" className="flex h-9 w-9 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60">

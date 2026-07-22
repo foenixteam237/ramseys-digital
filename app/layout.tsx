@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   title: "Ramseys Digital | Solutions IT & services numériques",
   description:
     "Ramseys Digital accompagne les entreprises avec des services informatiques fiables, maintenance, solutions digitales et audit réseau à Maroua, Cameroun.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
