@@ -1,26 +1,186 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-rd-red: #d61f26;
+  --color-rd-redlight: #ff3b44;
+  --color-rd-black: #111111;
+  --color-rd-deep: #0a0a0a;
+  --color-rd-graphite: #1b1b1d;
+  --color-rd-line: #2a2a2d;
+  --font-display: var(--font-space-grotesk);
+  --font-body: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #0a0a0a;
+  color: #ffffff;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-space-grotesk), sans-serif;
+}
+
+.font-body {
+  font-family: var(--font-inter), sans-serif;
+}
+
+.font-mono {
+  font-family: var(--font-jetbrains-mono), monospace;
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.red-glow-radial {
+  background: radial-gradient(ellipse 60% 50% at 75% 25%, rgba(214, 31, 38, 0.28), transparent 60%);
+}
+
+.rack {
+  background: linear-gradient(180deg, #17181a 0%, #0d0e0f 100%);
+  border: 1px solid #2c2c2f;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.rack-unit {
+  background: linear-gradient(180deg, #202124 0%, #17181a 100%);
+  border: 1px solid #2f3033;
+}
+
+.led {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #2e3033;
+  box-shadow: none;
+}
+
+.led.on {
+  background: #37e07a;
+  box-shadow: 0 0 6px 1px rgba(55, 224, 122, 0.8);
+  animation: blink 2.4s ease-in-out infinite;
+}
+
+.led.red-on {
+  background: #ff4a52;
+  box-shadow: 0 0 6px 1px rgba(255, 74, 82, 0.8);
+  animation: blink 1.6s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(214, 31, 38, 0.9), transparent);
+  animation: scan 3.2s linear infinite;
+  filter: blur(0.5px);
+}
+
+@keyframes scan {
+  0% {
+    top: 6%;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    top: 94%;
+    opacity: 0;
+  }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card-hover {
+  transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-6px);
+  border-color: rgba(214, 31, 38, 0.55);
+  box-shadow: 0 20px 50px -20px rgba(214, 31, 38, 0.35);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #d61f26, #a6151a);
+  box-shadow: 0 10px 30px -8px rgba(214, 31, 38, 0.55);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 14px 36px -6px rgba(214, 31, 38, 0.75);
+}
+
+.nav-link {
+  position: relative;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0%;
+  height: 1.5px;
+  background: #d61f26;
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+.mono-num {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: #d61f26;
+  color: white;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanline,
+  .led.on,
+  .led.red-on {
+    animation: none !important;
+  }
+
+  .reveal {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
