@@ -26,6 +26,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { Providers } from "./providers";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -36,7 +38,9 @@ export default function RootLayout({
       lang="fr"
       className={`${spaceGrotesk.variable} ${inter.variable} ${jetBrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-rd-deep text-white">{children}</body>
+      <body className="min-h-full bg-rd-deep text-white">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

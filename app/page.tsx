@@ -2,6 +2,9 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 const services = [
   {
@@ -124,11 +127,28 @@ const rackItems: Array<{ label: string; leds: string[] }> = [
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [dbStatus, setDbStatus] = useState("Vérification de la table posts…");
   const [formData, setFormData] = useState({
     name: "",
     contact: "",
     need: "",
   });
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("posts")
+      .select("id, title")
+      .limit(1)
+      .then(({ data, error }) => {
+        if (error) {
+          setDbStatus(`Base Supabase accessible, mais la table posts n'est pas encore créée : ${error.message}`);
+          return;
+        }
+
+        setDbStatus(`Base Supabase accessible. ${data?.length ?? 0} ligne(s) lues dans posts.`);
+      });
+  }, []);
 
   useEffect(() => {
     const revealEls = document.querySelectorAll<HTMLElement>(".reveal");
@@ -181,82 +201,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-rd-deep text-white antialiased">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-rd-deep/70 backdrop-blur-lg">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-10">
-          <a href="#top" className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="Ramseys Digital logo"
-              width={72}
-              height={72}
-              className="h-9 w-9 rounded-md object-cover"
-              priority
-            />
-            <span className="font-display text-lg font-semibold tracking-tight">
-              Ramseys <span className="text-rd-red">Digital</span>
-            </span>
-          </a>
-
-          <nav className="hidden items-center gap-9 text-sm font-medium text-white/80 md:flex">
-            <a href="#services" className="nav-link hover:text-white">
-              Services
-            </a>
-            <a href="#pourquoi" className="nav-link hover:text-white">
-              Pourquoi nous
-            </a>
-            <a href="#stats" className="nav-link hover:text-white">
-              Résultats
-            </a>
-            <a href="#temoignages" className="nav-link hover:text-white">
-              Témoignages
-            </a>
-            <a href="#contact" className="nav-link hover:text-white">
-              Contact
-            </a>
-          </nav>
-
-          <a
-            href="#contact"
-            className="btn-primary hidden rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.03] md:inline-flex"
-          >
-            Demander un devis
-          </a>
-
-          <button
-            id="burger"
-            type="button"
-            aria-label="Ouvrir le menu"
-            aria-expanded={mobileMenuOpen}
-            className="flex h-9 w-9 flex-col items-center justify-center gap-1.5 md:hidden"
-            onClick={() => setMobileMenuOpen((value) => !value)}
-          >
-            <span className="h-[2px] w-6 bg-white" />
-            <span className="h-[2px] w-6 bg-white" />
-            <span className="h-[2px] w-4 self-end bg-white" />
-          </button>
-        </div>
-
-        <div
-          id="mobileMenu"
-          className={`${mobileMenuOpen ? "flex" : "hidden"} flex-col gap-1 border-t border-white/5 bg-rd-deep px-6 pb-6 md:hidden`}
-        >
-          <a href="#services" className="border-b border-white/5 py-3" onClick={() => setMobileMenuOpen(false)}>
-            Services
-          </a>
-          <a href="#pourquoi" className="border-b border-white/5 py-3" onClick={() => setMobileMenuOpen(false)}>
-            Pourquoi nous
-          </a>
-          <a href="#stats" className="border-b border-white/5 py-3" onClick={() => setMobileMenuOpen(false)}>
-            Résultats
-          </a>
-          <a href="#temoignages" className="border-b border-white/5 py-3" onClick={() => setMobileMenuOpen(false)}>
-            Témoignages
-          </a>
-          <a href="#contact" className="py-3" onClick={() => setMobileMenuOpen(false)}>
-            Contact
-          </a>
-        </div>
-      </header>
+      <Header />
 
       <main>
         <section id="top" className="relative overflow-hidden pb-28 pt-40 lg:pb-36 lg:pt-48 grid-bg red-glow-radial">
@@ -528,63 +473,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-white/5 pt-16 pb-8">
-        <div className="mx-auto grid max-w-7xl gap-10 px-6 sm:grid-cols-2 lg:grid-cols-4 lg:px-10">
-          <div>
-            <a href="#top" className="mb-4 flex items-center gap-3">
-              <Image
-                src="/logo.png"
-                alt="Ramseys Digital logo"
-                width={72}
-                height={72}
-                className="h-9 w-9 rounded-md object-cover"
-              />
-              <span className="font-display text-lg font-semibold">
-                Ramseys <span className="text-rd-red">Digital</span>
-              </span>
-            </a>
-            <p className="text-sm leading-relaxed text-white/50">Votre partenaire technologique de confiance.</p>
-          </div>
-
-          <div>
-            <p className="mb-4 font-mono text-xs uppercase tracking-widest text-white/40">Liens rapides</p>
-            <ul className="space-y-2 text-sm text-white/60">
-              <li><a href="#services" className="transition-colors hover:text-rd-red">Nos services</a></li>
-              <li><a href="#pourquoi" className="transition-colors hover:text-rd-red">Pourquoi nous</a></li>
-              <li><a href="#temoignages" className="transition-colors hover:text-rd-red">Témoignages</a></li>
-              <li><a href="#contact" className="transition-colors hover:text-rd-red">Contact</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <p className="mb-4 font-mono text-xs uppercase tracking-widest text-white/40">Coordonnées</p>
-            <ul className="space-y-2 text-sm text-white/60">
-              <li>+237 657 828 457</li>
-              <li>ramseysdigital@gmail.com</li>
-              <li>Maroua, Cameroun</li>
-            </ul>
-          </div>
-
-          <div>
-            <p className="mb-4 font-mono text-xs uppercase tracking-widest text-white/40">Suivez-nous</p>
-            <div className="flex gap-3">
-              <a href="https://www.facebook.com/share/1Cga7KWbce/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="flex h-9 w-9 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V5.5h-3C11.8 5.5 10 7.3 10 9.5V12H8v3.5h2V21h3.5v-5.5H16l.5-3.5h-3V9.7c0-.5.3-.7.5-.7Z" /></svg>
-              </a>
-              <a href="https://wa.me/237657828457" className="flex h-9 w-9 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.6 14.3c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.7-1.2-4.4-3.9-4.6-4.1-.1-.2-1.1-1.4-1.1-2.7s.7-1.9 1-2.2c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.2.1.3 0 .5-.1.2-.2.3-.3.5-.2.2-.3.3-.1.6.2.3.9 1.4 1.9 2.3 1.3 1.1 2.3 1.5 2.6 1.6.3.1.5.1.6-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1l1.7.8c.2.1.4.2.4.3.1.2.1.8-.1 1.3Z" /></svg>
-              </a>
-              <a href="#" className="flex h-9 w-9 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM3 9h4v12H3V9Zm7 0h3.8v1.7h.05c.5-1 1.8-2 3.7-2 4 0 4.7 2.6 4.7 6v6.3h-4v-5.6c0-1.3 0-3-1.9-3s-2.2 1.4-2.2 2.9V21h-4V9Z" /></svg>
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <div className="mx-auto mt-12 max-w-7xl border-t border-white/5 px-6 pt-6 text-center text-xs font-mono text-white/40 lg:px-10">
-          © 2026 Ramseys Digital – Tous droits réservés.
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
