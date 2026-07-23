@@ -11,8 +11,8 @@ export default function LoginForm() {
 
   // Form Fields
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('admin@ramseysdigital.com');
-  const [password, setPassword] = useState('Admin123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   // Status State
@@ -114,9 +114,6 @@ export default function LoginForm() {
           onClick={() => {
             setIsLogin(false);
             setError('');
-            // Reset email/password default values for registration
-            if (email === 'admin@ramseysdigital.com') setEmail('');
-            if (password === 'Admin123!') setPassword('');
           }}
           className={`flex-1 py-3 text-center text-sm font-semibold transition-colors ${
             !isLogin

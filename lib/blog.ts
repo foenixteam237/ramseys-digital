@@ -1,6 +1,33 @@
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 
+export interface PostLike {
+  id: string;
+  user_id: string;
+  post_id: string;
+  created_at: string;
+}
+
+export interface PostComment {
+  id: string;
+  content: string;
+  user_id: string;
+  post_id: string;
+  created_at: string;
+  user?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+  };
+}
+
+export interface PostShare {
+  id: string;
+  post_id: string;
+  platform: string;
+  created_at: string;
+}
+
 const normalizePost = (post: Record<string, unknown>) => ({
   id: post.id as string,
   title: (post.title as string | undefined) ?? '',
@@ -13,9 +40,9 @@ const normalizePost = (post: Record<string, unknown>) => ({
   createdAt: (post.created_at as string | undefined) ?? (post.createdAt as string | undefined) ?? new Date().toISOString(),
   updatedAt: (post.updated_at as string | undefined) ?? (post.updatedAt as string | undefined) ?? new Date().toISOString(),
   coverImageUrl: (post.cover_image_url as string | null) ?? (post.coverImageUrl as string | null) ?? null,
-  likes: Array.isArray(post.likes) ? post.likes : [],
-  comments: Array.isArray(post.comments) ? post.comments : [],
-  shares: Array.isArray(post.shares) ? post.shares : [],
+  likes: (Array.isArray(post.likes) ? post.likes : []) as PostLike[],
+  comments: (Array.isArray(post.comments) ? post.comments : []) as PostComment[],
+  shares: (Array.isArray(post.shares) ? post.shares : []) as PostShare[],
 });
 
 export async function getPublishedPosts() {

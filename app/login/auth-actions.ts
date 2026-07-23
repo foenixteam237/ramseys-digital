@@ -19,7 +19,7 @@ export async function signUpAction(formData: FormData) {
   });
 
   if (!payload.success) {
-    const errors = payload.error.errors.map((err) => err.message).join(' ');
+    const errors = payload.error.issues.map((issue) => issue.message).join(' ');
     throw new Error(errors);
   }
 

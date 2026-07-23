@@ -2,8 +2,41 @@
 
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
+import { z } from 'zod';
 import { getCurrentUser } from '@/lib/session';
 import { createClient } from '@/utils/supabase/server';
+
+const shareSchema = z.object({
+  postId: z.string().min(1),
+  platform: z.enum(['WHATSAPP', 'FACEBOOK', 'LINKEDIN', 'COPY_LINK']),
+});
+
+// 0. Record a share
+export async function recordShareAction(
+  postId: string,
+  platform: 'WHATSAPP' | 'FACEBOOK' | 'LINKEDIN' | 'COPY_LINK',
+) {
+  const parsed = shareSchema.safeParse({ postId, platform });
+
+  if (!parsed.success) {
+    throw new Error('Partage invalide.');
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase.from('shares').insert({
+    post_id: parsed.data.postId,
+    platform: parsed.data.platform,
+  });
+
+  if (error) {
+    throw new Error(`Erreur lors de l'enregistrement du partage : ${error.message}`);
+  }
+
+  revalidatePath('/blog');
+  revalidatePath('/blog/[slug]');
+}
 
 // 1. Toggle Like
 export async function toggleLikeAction(postId: string) {

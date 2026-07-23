@@ -1,6 +1,8 @@
 import ReactMarkdown from 'react-markdown';
 import { notFound } from 'next/navigation';
 import { getPostBySlug } from '@/lib/blog';
+import { getCurrentUser } from '@/lib/session';
+import BlogInteractions from '@/components/BlogInteractions';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +14,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     notFound();
   }
 
+  const currentUser = await getCurrentUser();
+
   return (
     <main className="mx-auto min-h-screen max-w-4xl px-6 py-24">
       <article className="rounded-2xl border border-rd-line bg-rd-graphite p-8">
@@ -21,6 +25,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <div className="prose prose-invert mt-8 max-w-none text-white/90">
           <ReactMarkdown>{post.content}</ReactMarkdown>
         </div>
+
+        <BlogInteractions
+          postId={post.id}
+          postSlug={post.slug}
+          postTitle={post.title}
+          initialLikes={post.likes}
+          initialComments={post.comments}
+          initialShares={post.shares}
+          currentUser={currentUser}
+        />
       </article>
     </main>
   );

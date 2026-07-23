@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createPostAction } from './actions';
 
 export default function CreatePostForm() {
+  const router = useRouter();
   const [status, setStatus] = useState('');
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -15,6 +17,7 @@ export default function CreatePostForm() {
       await createPostAction(formData);
       setStatus('Article publié avec succès.');
       event.currentTarget.reset();
+      router.refresh();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Une erreur est survenue.');
     }
@@ -68,7 +71,7 @@ export default function CreatePostForm() {
         type="submit"
         className="inline-flex rounded-xl bg-rd-red px-4 py-3 text-sm font-semibold text-white"
       >
-        Enregistrer l’article
+        Enregistrer l'article
       </button>
 
       {status ? (
