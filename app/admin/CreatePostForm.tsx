@@ -3,8 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPostAction } from './actions';
+import type { AdminCategory } from '@/lib/admin';
 
-export default function CreatePostForm() {
+interface CreatePostFormProps {
+  categories: AdminCategory[];
+}
+
+export default function CreatePostForm({ categories }: CreatePostFormProps) {
   const router = useRouter();
   const [status, setStatus] = useState('');
 
@@ -62,6 +67,32 @@ export default function CreatePostForm() {
         />
       </label>
 
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm text-white/80">
+          <span className="mb-2 block">Catégorie</span>
+          <select
+            name="categoryId"
+            className="w-full rounded-xl border border-rd-line bg-rd-graphite px-4 py-3 text-white outline-none"
+          >
+            <option value="">Aucune</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm text-white/80">
+          <span className="mb-2 block">Image de couverture (URL)</span>
+          <input
+            name="coverImageUrl"
+            type="url"
+            placeholder="https://…"
+            className="w-full rounded-xl border border-rd-line bg-rd-graphite px-4 py-3 text-white outline-none"
+          />
+        </label>
+      </div>
+
       <label className="flex items-center gap-3 text-sm text-white/80">
         <input name="published" type="checkbox" className="h-4 w-4" defaultChecked />
         <span>Publier immédiatement</span>
@@ -71,7 +102,7 @@ export default function CreatePostForm() {
         type="submit"
         className="inline-flex rounded-xl bg-rd-red px-4 py-3 text-sm font-semibold text-white"
       >
-        Enregistrer l'article
+        Enregistrer l’article
       </button>
 
       {status ? (

@@ -12,14 +12,12 @@ const createPostSchema = z.object({
   excerpt: z.string().min(10),
   content: z.string().min(20),
   published: z.coerce.boolean().optional(),
+  categoryId: z.string().optional(),
+  coverImageUrl: z.string().optional(),
 });
 
-const updatePostSchema = z.object({
+const updatePostSchema = createPostSchema.extend({
   postId: z.string().min(1),
-  title: z.string().min(3),
-  excerpt: z.string().min(10),
-  content: z.string().min(20),
-  published: z.coerce.boolean().optional(),
 });
 
 const roleSchema = z.enum(['ADMIN', 'VISITOR']);
@@ -56,13 +54,15 @@ export async function createPostAction(formData: FormData) {
     excerpt: formData.get('excerpt'),
     content: formData.get('content'),
     published: formData.get('published') === 'on',
+    categoryId: formData.get('categoryId') || undefined,
+    coverImageUrl: formData.get('coverImageUrl') || undefined,
   });
 
   if (!payload.success) {
     throw new Error('Les champs du formulaire sont invalides.');
   }
 
-  const { title, excerpt, content, published } = payload.data;
+  const { title, excerpt, content, published, categoryId, coverImageUrl } = payload.data;
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const authorId = user.id;
@@ -75,10 +75,12 @@ export async function createPostAction(formData: FormData) {
     content,
     published: published ?? true,
     author_id: authorId,
+    category_id: categoryId || null,
+    cover_image_url: coverImageUrl || null,
   });
 
   if (error) {
-    throw new Error(`Impossible de publier l'article : ${error.message}`);
+    throw new Error(`Impossible de publier l’article : ${error.message}`);
   }
 
   revalidatePath('/admin');
@@ -94,23 +96,32 @@ export async function updatePostAction(formData: FormData) {
     excerpt: formData.get('excerpt'),
     content: formData.get('content'),
     published: formData.get('published') === 'on',
+    categoryId: formData.get('categoryId') || undefined,
+    coverImageUrl: formData.get('coverImageUrl') || undefined,
   });
 
   if (!payload.success) {
     throw new Error('Les champs du formulaire sont invalides.');
   }
 
-  const { postId, title, excerpt, content, published } = payload.data;
+  const { postId, title, excerpt, content, published, categoryId, coverImageUrl } = payload.data;
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
   const { error } = await supabase
     .from('posts')
-    .update({ title, excerpt, content, published: published ?? false })
+    .update({
+      title,
+      excerpt,
+      content,
+      published: published ?? false,
+      category_id: categoryId || null,
+      cover_image_url: coverImageUrl || null,
+    })
     .eq('id', postId);
 
   if (error) {
-    throw new Error(`Impossible de mettre à jour l'article : ${error.message}`);
+    throw new Error(`Impossible de mettre à jour l’article : ${error.message}`);
   }
 
   revalidatePath('/admin');
@@ -127,7 +138,7 @@ export async function togglePostPublishedAction(postId: string, published: boole
   const { error } = await supabase.from('posts').update({ published }).eq('id', postId);
 
   if (error) {
-    throw new Error(`Impossible de mettre à jour l'article : ${error.message}`);
+    throw new Error(`Impossible de mettre à jour l’article : ${error.message}`);
   }
 
   revalidatePath('/admin');
@@ -143,7 +154,7 @@ export async function deletePostAction(postId: string) {
   const { error } = await supabase.from('posts').delete().eq('id', postId);
 
   if (error) {
-    throw new Error(`Impossible de supprimer l'article : ${error.message}`);
+    throw new Error(`Impossible de supprimer l’article : ${error.message}`);
   }
 
   revalidatePath('/admin');
@@ -185,6 +196,207 @@ export async function updateUserRoleAction(userId: string, role: string) {
 
   if (error) {
     throw new Error(`Impossible de mettre à jour le rôle : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+}
+
+const createCategorySchema = z.object({
+  name: z.string().min(2),
+});
+
+export async function createCategoryAction(formData: FormData) {
+  await requireAdmin();
+
+  const payload = createCategorySchema.safeParse({ name: formData.get('name') });
+
+  if (!payload.success) {
+    throw new Error('Le nom de la catégorie est invalide.');
+  }
+
+  const { name } = payload.data;
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const slug = `${slugify(name)}-${Date.now()}`;
+
+  const { error } = await supabase.from('categories').insert({ name, slug });
+
+  if (error) {
+    throw new Error(`Impossible de créer la catégorie : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+}
+
+export async function deleteCategoryAction(categoryId: string) {
+  await requireAdmin();
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase.from('categories').delete().eq('id', categoryId);
+
+  if (error) {
+    throw new Error(`Impossible de supprimer la catégorie : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/blog');
+}
+
+export async function uploadMediaAction(formData: FormData) {
+  const user = await requireAdmin();
+
+  const file = formData.get('file');
+
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error('Aucun fichier sélectionné.');
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const path = `${Date.now()}-${slugify(file.name)}`;
+
+  const { error: uploadError } = await supabase.storage.from('media').upload(path, file, {
+    contentType: file.type || undefined,
+  });
+
+  if (uploadError) {
+    throw new Error(`Impossible d’envoyer le fichier : ${uploadError.message}`);
+  }
+
+  const { data: publicUrlData } = supabase.storage.from('media').getPublicUrl(path);
+
+  const { error: insertError } = await supabase.from('media').insert({
+    filename: file.name,
+    url: publicUrlData.publicUrl,
+    size_bytes: file.size,
+    uploaded_by: user.id,
+  });
+
+  if (insertError) {
+    throw new Error(`Impossible d’enregistrer le média : ${insertError.message}`);
+  }
+
+  revalidatePath('/admin');
+}
+
+export async function deleteMediaAction(mediaId: string, filename: string, url: string) {
+  await requireAdmin();
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const path = url.split('/media/').pop() ?? filename;
+  await supabase.storage.from('media').remove([path]);
+
+  const { error } = await supabase.from('media').delete().eq('id', mediaId);
+
+  if (error) {
+    throw new Error(`Impossible de supprimer le média : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+}
+
+const pageSchema = z.object({
+  title: z.string().min(3),
+  content: z.string().min(10),
+  published: z.coerce.boolean().optional(),
+});
+
+export async function createPageAction(formData: FormData) {
+  await requireAdmin();
+
+  const payload = pageSchema.safeParse({
+    title: formData.get('title'),
+    content: formData.get('content'),
+    published: formData.get('published') === 'on',
+  });
+
+  if (!payload.success) {
+    throw new Error('Les champs du formulaire sont invalides.');
+  }
+
+  const { title, content, published } = payload.data;
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const slug = `${slugify(title)}-${Date.now()}`;
+
+  const { error } = await supabase.from('pages').insert({
+    title,
+    slug,
+    content,
+    published: published ?? true,
+  });
+
+  if (error) {
+    throw new Error(`Impossible de créer la page : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+}
+
+const updatePageSchema = pageSchema.extend({
+  pageId: z.string().min(1),
+});
+
+export async function updatePageAction(formData: FormData) {
+  await requireAdmin();
+
+  const payload = updatePageSchema.safeParse({
+    pageId: formData.get('pageId'),
+    title: formData.get('title'),
+    content: formData.get('content'),
+    published: formData.get('published') === 'on',
+  });
+
+  if (!payload.success) {
+    throw new Error('Les champs du formulaire sont invalides.');
+  }
+
+  const { pageId, title, content, published } = payload.data;
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase
+    .from('pages')
+    .update({ title, content, published: published ?? false })
+    .eq('id', pageId);
+
+  if (error) {
+    throw new Error(`Impossible de mettre à jour la page : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/pages/[slug]');
+}
+
+export async function togglePagePublishedAction(pageId: string, published: boolean) {
+  await requireAdmin();
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase.from('pages').update({ published }).eq('id', pageId);
+
+  if (error) {
+    throw new Error(`Impossible de mettre à jour la page : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+}
+
+export async function deletePageAction(pageId: string) {
+  await requireAdmin();
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase.from('pages').delete().eq('id', pageId);
+
+  if (error) {
+    throw new Error(`Impossible de supprimer la page : ${error.message}`);
   }
 
   revalidatePath('/admin');

@@ -25,6 +25,7 @@ export default withAuth(
     pages: {
       signIn: '/login',
     },
+    secret: process.env.AUTH_SECRET || 'dev-secret-change-me',
   },
 );
 
