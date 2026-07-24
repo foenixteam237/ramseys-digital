@@ -152,6 +152,9 @@ export default function Header() {
           <Link href={getNavLink("#temoignages")} className="nav-link hover:text-white">
             Témoignages
           </Link>
+                    <Link href={getNavLink("#videos")} className="nav-link hover:text-white">
+            Vidéos
+          </Link>
           <Link href={getNavLink("#contact")} className="nav-link hover:text-white">
             Contact
           </Link>
@@ -439,6 +442,13 @@ export default function Header() {
             onClick={() => setMobileMenuOpen(false)}
           >
             Témoignages
+          </Link>
+                    <Link
+            href={getNavLink("#videos")}
+            className="border-b border-white/5 py-3 text-white/80 hover:text-white"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Vidéos
           </Link>
           <Link
             href={getNavLink("#contact")}

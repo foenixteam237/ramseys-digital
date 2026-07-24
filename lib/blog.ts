@@ -28,22 +28,35 @@ export interface PostShare {
   created_at: string;
 }
 
-const normalizePost = (post: Record<string, unknown>) => ({
-  id: post.id as string,
-  title: (post.title as string | undefined) ?? '',
-  slug: (post.slug as string | undefined) ?? '',
-  excerpt: (post.excerpt as string | undefined) ?? '',
-  content: (post.content as string | undefined) ?? '',
-  published: (post.published as boolean | undefined) ?? false,
-  authorId: (post.author_id as string | undefined) ?? (post.authorId as string | undefined) ?? null,
-  author: (post.author as Record<string, unknown> | undefined) ?? null,
-  createdAt: (post.created_at as string | undefined) ?? (post.createdAt as string | undefined) ?? new Date().toISOString(),
-  updatedAt: (post.updated_at as string | undefined) ?? (post.updatedAt as string | undefined) ?? new Date().toISOString(),
-  coverImageUrl: (post.cover_image_url as string | null) ?? (post.coverImageUrl as string | null) ?? null,
-  likes: (Array.isArray(post.likes) ? post.likes : []) as PostLike[],
-  comments: (Array.isArray(post.comments) ? post.comments : []) as PostComment[],
-  shares: (Array.isArray(post.shares) ? post.shares : []) as PostShare[],
-});
+function firstOf<T>(value: T | T[] | null | undefined): T | undefined {
+  return Array.isArray(value) ? value[0] : value ?? undefined;
+}
+
+const normalizePost = (post: Record<string, unknown>) => {
+  const category = firstOf(post.category as { name?: string } | { name?: string }[] | null);
+
+  return {
+    id: post.id as string,
+    title: (post.title as string | undefined) ?? '',
+    slug: (post.slug as string | undefined) ?? '',
+    excerpt: (post.excerpt as string | undefined) ?? '',
+    content: (post.content as string | undefined) ?? '',
+    published: (post.published as boolean | undefined) ?? false,
+    authorId: (post.author_id as string | undefined) ?? (post.authorId as string | undefined) ?? null,
+    author: (post.author as Record<string, unknown> | undefined) ?? null,
+    createdAt: (post.created_at as string | undefined) ?? (post.createdAt as string | undefined) ?? new Date().toISOString(),
+    updatedAt: (post.updated_at as string | undefined) ?? (post.updatedAt as string | undefined) ?? new Date().toISOString(),
+    coverImageUrl: (post.cover_image_url as string | null) ?? (post.coverImageUrl as string | null) ?? null,
+    categoryId: (post.category_id as string | null) ?? null,
+    categoryName: category?.name ?? null,
+    likes: (Array.isArray(post.likes) ? post.likes : []) as PostLike[],
+    comments: (Array.isArray(post.comments) ? post.comments : []) as PostComment[],
+    shares: (Array.isArray(post.shares) ? post.shares : []) as PostShare[],
+  };
+};
+
+const POST_SELECT =
+  '*, author:users(*), category:categories(name), likes(*), comments(*, user:users(*)), shares(*)';
 
 export async function getPublishedPosts() {
   const cookieStore = await cookies();
@@ -51,7 +64,7 @@ export async function getPublishedPosts() {
 
   const { data, error } = await supabase
     .from('posts')
-    .select('*, author:users(*), likes(*), comments(*, user:users(*)), shares(*)')
+    .select(POST_SELECT)
     .eq('published', true)
     .order('created_at', { ascending: false });
 
@@ -69,7 +82,7 @@ export async function getPostBySlug(slug: string) {
 
   const { data, error } = await supabase
     .from('posts')
-    .select('*, author:users(*), likes(*), comments(*, user:users(*)), shares(*)')
+    .select(POST_SELECT)
     .eq('slug', slug)
     .maybeSingle();
 

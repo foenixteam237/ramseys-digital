@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/session';
 import { createClient } from '@/utils/supabase/server';
+import { sendEmail, buildNewPostEmail, getSiteUrl } from '@/lib/email';
 
 const createPostSchema = z.object({
   title: z.string().min(3),
@@ -45,7 +46,46 @@ async function requireAdmin() {
 
   return user;
 }
+async function notifyNewPost(post: {
+  title: string;
+  excerpt: string;
+  slug: string;
+  authorId: string;
+}) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
 
+  const { data: recipients, error } = await supabase
+    .from('users')
+    .select('id, email, email_verified')
+    .eq('notify_new_posts', true)
+    .neq('id', post.authorId);
+
+  if (error || !recipients || recipients.length === 0) {
+    return;
+  }
+
+  const link = `/blog/${post.slug}`;
+
+  const notificationRows = recipients.map((recipient) => ({
+    user_id: recipient.id,
+    type: 'NEW_POST',
+    title: 'Nouvel article',
+    message: `Un nouvel article a été publié : "${post.title}"`,
+    link,
+  }));
+
+  await supabase.from('notifications').insert(notificationRows);
+
+  const postUrl = `${getSiteUrl()}${link}`;
+  const { subject, html } = buildNewPostEmail(post.title, post.excerpt, postUrl);
+
+  await Promise.all(
+    recipients
+      .filter((recipient) => recipient.email_verified && recipient.email)
+      .map((recipient) => sendEmail({ to: recipient.email as string, subject, html })),
+  );
+}
 export async function createPostAction(formData: FormData) {
   const user = await requireAdmin();
 
@@ -68,19 +108,25 @@ export async function createPostAction(formData: FormData) {
   const authorId = user.id;
   const slug = `${slugify(title)}-${Date.now()}`;
 
+const isPublished = published ?? true;
+
   const { error } = await supabase.from('posts').insert({
     title,
     slug,
     excerpt,
     content,
-    published: published ?? true,
+    published: isPublished,
     author_id: authorId,
     category_id: categoryId || null,
     cover_image_url: coverImageUrl || null,
   });
 
   if (error) {
-    throw new Error(`Impossible de publier l’article : ${error.message}`);
+    throw new Error(`Impossible de publier l'article : ${error.message}`);
+  }
+
+  if (isPublished) {
+    await notifyNewPost({ title, excerpt, slug, authorId });
   }
 
   revalidatePath('/admin');

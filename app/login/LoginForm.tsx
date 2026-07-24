@@ -36,7 +36,11 @@ export default function LoginForm() {
 
       if (result?.error) {
         setLoading(false);
-        setError('Identifiants invalides. Vérifiez votre email et votre mot de passe.');
+        if (result.error.includes('EMAIL_NOT_VERIFIED')) {
+          setError('Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.');
+        } else {
+          setError('Identifiants invalides. Vérifiez votre email et votre mot de passe.');
+        }
         return;
       }
 
@@ -65,25 +69,11 @@ export default function LoginForm() {
         formData.append('password', password);
 
         await signUpAction(formData);
-        setSuccess('Compte créé avec succès ! Connexion automatique...');
-
-        // Auto login after sign up
-        const result = await signIn('credentials', {
-          email,
-          password,
-          redirect: false,
-        });
-
         setLoading(false);
-
-        if (result?.error) {
-          setError('Compte créé mais connexion automatique échouée. Veuillez vous connecter manuellement.');
-          setIsLogin(true);
-          return;
-        }
-
-        router.push('/blog');
-        router.refresh();
+        setSuccess('Compte créé ! Consultez votre boîte mail pour confirmer votre adresse avant de vous connecter.');
+        setIsLogin(true);
+        setPassword('');
+        setConfirmPassword('');
       } catch (err) {
         setLoading(false);
         setError(err instanceof Error ? err.message : 'Une erreur est survenue.');

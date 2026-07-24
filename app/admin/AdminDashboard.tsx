@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import type {
   AdminPost,
   AdminUser,
@@ -132,6 +133,16 @@ function IconGear() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
+function IconLogout() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <path d="M16 17l5-5-5-5" />
+      <path d="M21 12H9" />
     </svg>
   );
 }
@@ -378,6 +389,13 @@ export default function AdminDashboard({
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rd-red/20 font-display text-sm font-bold text-rd-redlight">
               {currentUserName ? currentUserName[0].toUpperCase() : "A"}
             </div>
+            <button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="flex items-center gap-2 rounded-xl border border-rd-line px-3 py-2 text-sm font-semibold text-white/70 transition hover:border-rd-red/50 hover:text-white"
+            >
+              <IconLogout />
+              <span className="hidden sm:inline">Déconnexion</span>
+            </button>
           </div>
         </header>
 
@@ -1043,11 +1061,13 @@ function MediaPanel({ media }: { media: AdminMediaItem[] }) {
     setStatus("Envoi en cours…");
     setError("");
 
+    const form = event.currentTarget;
+
     try {
-      const formData = new FormData(event.currentTarget);
+      const formData = new FormData(form);
       await uploadMediaAction(formData);
       setStatus("Fichier envoyé.");
-      event.currentTarget.reset();
+      form.reset();
       router.refresh();
     } catch (err) {
       setStatus("");

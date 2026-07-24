@@ -55,7 +55,7 @@ export const authOptions: NextAuthOptions = {
         const supabase = createClient(cookieStore);
         const { data: user, error } = await supabase
           .from('users')
-          .select('id, name, email, role, password_hash, avatar_url')
+          .select('id, name, email, role, password_hash, avatar_url, email_verified')
           .eq('email', email)
           .maybeSingle();
 
@@ -67,6 +67,10 @@ export const authOptions: NextAuthOptions = {
 
         if (!passwordMatches) {
           return null;
+        }
+
+        if (!user.email_verified) {
+          throw new Error('EMAIL_NOT_VERIFIED');
         }
 
         return {

@@ -1,42 +1,46 @@
-import Link from 'next/link';
 import { getPublishedPosts } from '@/lib/blog';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import BlogList from './BlogList';
 
 export const dynamic = 'force-dynamic';
 
 export default async function BlogPage() {
   const posts = await getPublishedPosts();
 
+  const listPosts = posts.map((post) => ({
+    id: post.id,
+    title: post.title,
+    slug: post.slug,
+    excerpt: post.excerpt,
+    content: post.content,
+    createdAt: post.createdAt,
+    coverImageUrl: post.coverImageUrl,
+    categoryName: post.categoryName,
+    authorName: (post.author?.name as string | undefined) ?? 'Ramseys Digital',
+    likesCount: post.likes.length,
+    commentsCount: post.comments.length,
+  }));
+
+  const usedCategoryNames = Array.from(
+    new Set(listPosts.map((post) => post.categoryName).filter((name): name is string => Boolean(name))),
+  ).sort((a, b) => a.localeCompare(b));
+
   return (
     <div className="min-h-screen bg-rd-deep text-white antialiased">
       <Header />
       <main className="mx-auto min-h-screen max-w-6xl px-6 pt-32 pb-24">
-        <div className="mb-10 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-rd-red">Blog / Astuces</p>
-            <h1 className="font-display text-4xl font-semibold text-white">Articles publiés</h1>
-          </div>
+        <div className="mb-12 max-w-2xl">
+          <p className="mb-4 font-mono text-xs uppercase tracking-[0.25em] text-rd-red">Blog / Astuces</p>
+          <h1 className="font-display text-4xl font-semibold leading-tight text-white sm:text-5xl">
+            Conseils, retours d&apos;expérience et actualités IT
+          </h1>
+          <p className="mt-4 text-white/60">
+            Des articles pratiques sur la maintenance, la sécurité et les solutions numériques, écrits par l&apos;équipe Ramseys Digital.
+          </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {posts.map((post) => (
-            <article key={post.id} className="rounded-2xl border border-rd-line bg-rd-graphite p-5">
-              <div className="mb-4 flex items-center justify-between text-sm text-white/60">
-                <span>{new Date(post.createdAt).toLocaleDateString('fr-FR')}</span>
-                <span>{post.likes.length} likes</span>
-              </div>
-              <h2 className="font-display text-2xl font-semibold text-white">{post.title}</h2>
-              <p className="mt-3 text-sm text-white/70">{post.excerpt}</p>
-              <Link
-                href={`/blog/${post.slug}`}
-                className="mt-5 inline-flex rounded-lg bg-rd-red px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-              >
-                Lire l’article
-              </Link>
-            </article>
-          ))}
-        </div>
+        <BlogList posts={listPosts} categories={usedCategoryNames} />
       </main>
       <Footer />
     </div>

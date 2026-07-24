@@ -17,11 +17,13 @@ export default function CreatePostForm({ categories }: CreatePostFormProps) {
     event.preventDefault();
     setStatus('Publication en cours…');
 
+    const form = event.currentTarget;
+
     try {
-      const formData = new FormData(event.currentTarget);
+      const formData = new FormData(form);
       await createPostAction(formData);
       setStatus('Article publié avec succès.');
-      event.currentTarget.reset();
+      form.reset();
       router.refresh();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Une erreur est survenue.');
