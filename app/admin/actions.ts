@@ -47,6 +47,34 @@ async function requireAdmin() {
   return user;
 }
 
+// ADMIN ou EDITOR : peut rediger des articles.
+async function requireEditor() {
+  const user = await getCurrentUser();
+
+  if (!user || (user.role !== 'ADMIN' && user.role !== 'EDITOR')) {
+    redirect('/login');
+  }
+
+  return user;
+}
+
+type SupabaseServerClient = ReturnType<typeof createClient>;
+
+// Un EDITOR ne peut agir que sur ses propres articles ; un ADMIN sur tous.
+async function assertCanManagePost(
+  supabase: SupabaseServerClient,
+  postId: string,
+  user: { id: string; role: string },
+) {
+  if (user.role === 'ADMIN') return;
+
+  const { data } = await supabase.from('posts').select('author_id').eq('id', postId).single();
+
+  if (!data || data.author_id !== user.id) {
+    throw new Error('Vous ne pouvez modifier que vos propres articles.');
+  }
+}
+
 async function notifyNewPost(post: {
   title: string;
   excerpt: string;
@@ -89,7 +117,7 @@ async function notifyNewPost(post: {
 }
 
 export async function createPostAction(formData: FormData) {
-  const user = await requireAdmin();
+  const user = await requireEditor();
 
   const payload = createPostSchema.safeParse({
     title: formData.get('title'),
@@ -137,7 +165,7 @@ export async function createPostAction(formData: FormData) {
 }
 
 export async function updatePostAction(formData: FormData) {
-  await requireAdmin();
+  const user = await requireEditor();
 
   const payload = updatePostSchema.safeParse({
     postId: formData.get('postId'),
@@ -156,6 +184,8 @@ export async function updatePostAction(formData: FormData) {
   const { postId, title, excerpt, content, published, categoryId, coverImageUrl } = payload.data;
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
+
+  await assertCanManagePost(supabase, postId, user);
 
   const { error } = await supabase
     .from('posts')
@@ -179,10 +209,12 @@ export async function updatePostAction(formData: FormData) {
 }
 
 export async function togglePostPublishedAction(postId: string, published: boolean) {
-  await requireAdmin();
+  const user = await requireEditor();
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
+
+  await assertCanManagePost(supabase, postId, user);
 
   const { error } = await supabase.from('posts').update({ published }).eq('id', postId);
 
@@ -195,10 +227,12 @@ export async function togglePostPublishedAction(postId: string, published: boole
 }
 
 export async function deletePostAction(postId: string) {
-  await requireAdmin();
+  const user = await requireEditor();
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
+
+  await assertCanManagePost(supabase, postId, user);
 
   const { error } = await supabase.from('posts').delete().eq('id', postId);
 
@@ -274,7 +308,7 @@ const createCategorySchema = z.object({
 });
 
 export async function createCategoryAction(formData: FormData) {
-  await requireAdmin();
+  const user = await requireEditor();
 
   const payload = createCategorySchema.safeParse({ name: formData.get('name') });
 
@@ -287,7 +321,7 @@ export async function createCategoryAction(formData: FormData) {
   const supabase = createClient(cookieStore);
   const slug = `${slugify(name)}-${Date.now()}`;
 
-  const { error } = await supabase.from('categories').insert({ name, slug });
+  const { error } = await supabase.from('categories').insert({ name, slug, created_by: user.id });
 
   if (error) {
     throw new Error(`Impossible de créer la catégorie : ${error.message}`);
@@ -297,10 +331,17 @@ export async function createCategoryAction(formData: FormData) {
 }
 
 export async function deleteCategoryAction(categoryId: string) {
-  await requireAdmin();
+  const user = await requireEditor();
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
+
+  if (user.role !== 'ADMIN') {
+    const { data } = await supabase.from('categories').select('created_by').eq('id', categoryId).single();
+    if (!data || data.created_by !== user.id) {
+      throw new Error('Vous ne pouvez supprimer que vos propres catégories.');
+    }
+  }
 
   const { error } = await supabase.from('categories').delete().eq('id', categoryId);
 
@@ -313,7 +354,7 @@ export async function deleteCategoryAction(categoryId: string) {
 }
 
 export async function uploadMediaAction(formData: FormData) {
-  const user = await requireAdmin();
+  const user = await requireEditor();
 
   const file = formData.get('file');
 
@@ -350,10 +391,17 @@ export async function uploadMediaAction(formData: FormData) {
 }
 
 export async function deleteMediaAction(mediaId: string, filename: string, url: string) {
-  await requireAdmin();
+  const user = await requireEditor();
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
+
+  if (user.role !== 'ADMIN') {
+    const { data } = await supabase.from('media').select('uploaded_by').eq('id', mediaId).single();
+    if (!data || data.uploaded_by !== user.id) {
+      throw new Error('Vous ne pouvez supprimer que vos propres médias.');
+    }
+  }
 
   const path = url.split('/media/').pop() ?? filename;
   await supabase.storage.from('media').remove([path]);
@@ -371,7 +419,7 @@ export async function deleteMediaAction(mediaId: string, filename: string, url: 
 // Storage, enregistre dans la bibliothèque média et renvoie l'URL publique
 // pour l'insérer dans le contenu ou comme image de couverture.
 export async function uploadImageAction(formData: FormData): Promise<{ url: string }> {
-  const user = await requireAdmin();
+  const user = await requireEditor();
 
   const file = formData.get('file');
 

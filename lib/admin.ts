@@ -71,17 +71,23 @@ function firstOf<T>(value: T | T[] | null | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : value ?? undefined;
 }
 
-export async function getAllPostsForAdmin(): Promise<AdminPost[]> {
+export async function getAllPostsForAdmin(authorId?: string): Promise<AdminPost[]> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('posts')
     .select(
       'id, title, slug, excerpt, content, published, created_at, updated_at, cover_image_url, category_id, author_id, author_name, views, ' +
         'author:users(name), category:categories(name), likes(created_at), comments(created_at), shares(created_at)',
     )
     .order('created_at', { ascending: false });
+
+  if (authorId) {
+    query = query.eq('author_id', authorId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('getAllPostsForAdmin error:', error.message);
@@ -177,14 +183,20 @@ export async function getAllCommentsForAdmin(): Promise<AdminComment[]> {
   });
 }
 
-export async function getAllCategories(): Promise<AdminCategory[]> {
+export async function getAllCategories(createdBy?: string): Promise<AdminCategory[]> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('categories')
     .select('id, name, slug, posts(id)')
     .order('name', { ascending: true });
+
+  if (createdBy) {
+    query = query.eq('created_by', createdBy);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('getAllCategories error:', error.message);
@@ -202,14 +214,20 @@ export async function getAllCategories(): Promise<AdminCategory[]> {
   });
 }
 
-export async function getAllMedia(): Promise<AdminMediaItem[]> {
+export async function getAllMedia(uploadedBy?: string): Promise<AdminMediaItem[]> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('media')
     .select('id, filename, url, size_bytes, created_at')
     .order('created_at', { ascending: false });
+
+  if (uploadedBy) {
+    query = query.eq('uploaded_by', uploadedBy);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('getAllMedia error:', error.message);

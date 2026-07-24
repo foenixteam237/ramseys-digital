@@ -39,6 +39,7 @@ type Tab =
   | "pages"
   | "commentaires"
   | "utilisateurs"
+  | "docs"
   | "apparence"
   | "parametres";
 
@@ -51,6 +52,7 @@ interface AdminDashboardProps {
   initialPages: AdminPageItem[];
   currentUserId: string;
   currentUserName: string;
+  currentUserRole: string;
 }
 
 // ---------- Icons ----------
@@ -146,6 +148,15 @@ function IconLogout() {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <path d="M16 17l5-5-5-5" />
       <path d="M21 12H9" />
+    </svg>
+  );
+}
+
+function IconBook() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Z" />
+      <path d="M4 19a2 2 0 0 1 2-2h13" />
     </svg>
   );
 }
@@ -315,19 +326,27 @@ function LineChart({ data, series }: { data: ReturnType<typeof getDailyActivity>
 
 // ---------- Layout ----------
 
-const NAV_ITEMS: { tab: Tab; label: string; icon: ReactNode }[] = [
+interface NavItem {
+  tab: Tab;
+  label: string;
+  icon: ReactNode;
+  adminOnly?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { tab: "dashboard", label: "Dashboard", icon: <IconHome /> },
   { tab: "articles", label: "Articles", icon: <IconPosts /> },
   { tab: "categories", label: "Catégories", icon: <IconFolder /> },
   { tab: "media", label: "Média", icon: <IconImage /> },
-  { tab: "pages", label: "Pages", icon: <IconFile /> },
-  { tab: "commentaires", label: "Commentaires", icon: <IconMail /> },
-  { tab: "utilisateurs", label: "Utilisateurs", icon: <IconUsers /> },
+  { tab: "docs", label: "Aide à la rédaction", icon: <IconBook /> },
+  { tab: "pages", label: "Pages", icon: <IconFile />, adminOnly: true },
+  { tab: "commentaires", label: "Commentaires", icon: <IconMail />, adminOnly: true },
+  { tab: "utilisateurs", label: "Utilisateurs", icon: <IconUsers />, adminOnly: true },
 ];
 
-const SYSTEM_ITEMS: { tab: Tab; label: string; icon: ReactNode }[] = [
-  { tab: "apparence", label: "Apparence", icon: <IconPaint /> },
-  { tab: "parametres", label: "Paramètres", icon: <IconGear /> },
+const SYSTEM_ITEMS: NavItem[] = [
+  { tab: "apparence", label: "Apparence", icon: <IconPaint />, adminOnly: true },
+  { tab: "parametres", label: "Paramètres", icon: <IconGear />, adminOnly: true },
 ];
 
 export default function AdminDashboard({
@@ -339,9 +358,14 @@ export default function AdminDashboard({
   initialPages,
   currentUserId,
   currentUserName,
+  currentUserRole,
 }: AdminDashboardProps) {
   const [tab, setTab] = useState<Tab>("dashboard");
   const [search, setSearch] = useState("");
+
+  const isAdmin = currentUserRole === "ADMIN";
+  const navItems = NAV_ITEMS.filter((item) => isAdmin || !item.adminOnly);
+  const systemItems = SYSTEM_ITEMS.filter((item) => isAdmin || !item.adminOnly);
 
   return (
     <div className="flex min-h-screen bg-rd-deep text-white">
@@ -351,12 +375,12 @@ export default function AdminDashboard({
             R
           </span>
           <span className="font-display text-base font-semibold">
-            Ramseys <span className="text-rd-red">Admin</span>
+            Ramseys <span className="text-rd-red">{isAdmin ? "Admin" : "Studio"}</span>
           </span>
         </div>
 
         <nav className="mt-8 flex-1 space-y-1">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <SidebarLink key={item.tab} active={tab === item.tab} onClick={() => setTab(item.tab)} icon={item.icon}>
               {item.label}
               {item.tab === "commentaires" && initialComments.length > 0 ? (
@@ -367,12 +391,16 @@ export default function AdminDashboard({
             </SidebarLink>
           ))}
 
-          <p className="mt-6 px-3 text-[10px] font-mono uppercase tracking-widest text-white/30">Système</p>
-          {SYSTEM_ITEMS.map((item) => (
-            <SidebarLink key={item.tab} active={tab === item.tab} onClick={() => setTab(item.tab)} icon={item.icon}>
-              {item.label}
-            </SidebarLink>
-          ))}
+          {systemItems.length > 0 ? (
+            <>
+              <p className="mt-6 px-3 text-[10px] font-mono uppercase tracking-widest text-white/30">Système</p>
+              {systemItems.map((item) => (
+                <SidebarLink key={item.tab} active={tab === item.tab} onClick={() => setTab(item.tab)} icon={item.icon}>
+                  {item.label}
+                </SidebarLink>
+              ))}
+            </>
+          ) : null}
         </nav>
       </aside>
 
@@ -380,7 +408,12 @@ export default function AdminDashboard({
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-rd-line px-6 py-5 lg:px-10">
           <div>
             <p className="text-sm text-white/50">Bienvenue 👋</p>
-            <p className="font-display text-lg font-semibold text-white">{currentUserName}</p>
+            <p className="flex items-center gap-2 font-display text-lg font-semibold text-white">
+              {currentUserName}
+              <span className="rounded-full bg-rd-red/15 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-rd-redlight">
+                {currentUserRole}
+              </span>
+            </p>
           </div>
           <div className="flex items-center gap-4">
             <input
@@ -408,14 +441,14 @@ export default function AdminDashboard({
             <DashboardPanel
               posts={initialPosts}
               comments={initialComments}
-              categories={initialCategories}
-              media={initialMedia}
+              isAdmin={isAdmin}
               onNavigate={setTab}
             />
           ) : null}
           {tab === "articles" ? <PostsPanel posts={initialPosts} categories={initialCategories} search={search} /> : null}
           {tab === "categories" ? <CategoriesPanel categories={initialCategories} /> : null}
           {tab === "media" ? <MediaPanel media={initialMedia} /> : null}
+          {tab === "docs" ? <DocsPanel /> : null}
           {tab === "pages" ? <PagesPanel pages={initialPages} /> : null}
           {tab === "commentaires" ? <CommentsPanel comments={initialComments} search={search} /> : null}
           {tab === "utilisateurs" ? (
@@ -487,29 +520,30 @@ function StatCard({
 function DashboardPanel({
   posts,
   comments,
-  categories,
-  media,
+  isAdmin,
   onNavigate,
 }: {
   posts: AdminPost[];
   comments: AdminComment[];
-  categories: AdminCategory[];
-  media: AdminMediaItem[];
+  isAdmin: boolean;
   onNavigate: (tab: Tab) => void;
 }) {
   const postsGrowth = computeGrowth(posts.map((p) => p.createdAt));
-  const commentsGrowth = computeGrowth(comments.map((c) => c.createdAt));
-  const mediaGrowth = computeGrowth(media.map((m) => m.createdAt));
   const monthly = getMonthlyPostCounts(posts);
   const daily = getDailyActivity(posts);
+
+  const totalViews = posts.reduce((sum, post) => sum + post.views, 0);
+  const totalLikes = posts.reduce((sum, post) => sum + post.likesCount, 0);
+  const totalComments = posts.reduce((sum, post) => sum + post.commentsCount, 0);
+  const topViewed = [...posts].sort((a, b) => b.views - a.views).slice(0, 5);
 
   return (
     <div className="space-y-8">
       <div className="grid gap-4 md:grid-cols-4">
-        <StatCard label="Total articles" value={posts.length} growth={postsGrowth} />
-        <StatCard label="Total catégories" value={categories.length} />
-        <StatCard label="Fichiers média" value={media.length} growth={mediaGrowth} />
-        <StatCard label="Commentaires" value={comments.length} growth={commentsGrowth} />
+        <StatCard label={isAdmin ? "Total articles" : "Mes articles"} value={posts.length} growth={postsGrowth} />
+        <StatCard label="Vues totales" value={totalViews} />
+        <StatCard label="Likes" value={totalLikes} />
+        <StatCard label="Commentaires" value={totalComments} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -571,34 +605,52 @@ function DashboardPanel({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-rd-line bg-rd-graphite p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="font-display text-lg font-semibold">Derniers commentaires</h3>
-            <button
-              onClick={() => onNavigate("commentaires")}
-              className="text-xs font-semibold text-rd-redlight hover:underline"
-            >
-              Voir tout
-            </button>
-          </div>
-          <div className="mt-4 space-y-3">
-            {comments.length === 0 ? (
-              <p className="py-4 text-sm text-white/40 italic">Aucun commentaire.</p>
-            ) : (
-              comments.slice(0, 5).map((comment) => (
-                <div key={comment.id} className="border-b border-white/5 pb-3 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-semibold text-white/80">{comment.authorName}</span>
-                    <span className="shrink-0 text-xs text-white/40">
-                      {new Date(comment.createdAt).toLocaleDateString("fr-FR")}
-                    </span>
+        {isAdmin ? (
+          <div className="rounded-2xl border border-rd-line bg-rd-graphite p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-lg font-semibold">Derniers commentaires</h3>
+              <button
+                onClick={() => onNavigate("commentaires")}
+                className="text-xs font-semibold text-rd-redlight hover:underline"
+              >
+                Voir tout
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {comments.length === 0 ? (
+                <p className="py-4 text-sm text-white/40 italic">Aucun commentaire.</p>
+              ) : (
+                comments.slice(0, 5).map((comment) => (
+                  <div key={comment.id} className="border-b border-white/5 pb-3 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-white/80">{comment.authorName}</span>
+                      <span className="shrink-0 text-xs text-white/40">
+                        {new Date(comment.createdAt).toLocaleDateString("fr-FR")}
+                      </span>
+                    </div>
+                    <p className="mt-1 truncate text-white/60">{comment.content}</p>
                   </div>
-                  <p className="mt-1 truncate text-white/60">{comment.content}</p>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="rounded-2xl border border-rd-line bg-rd-graphite p-6">
+            <h3 className="font-display text-lg font-semibold">Articles les plus vus</h3>
+            <div className="mt-4 space-y-3">
+              {topViewed.length === 0 ? (
+                <p className="py-4 text-sm text-white/40 italic">Aucun article.</p>
+              ) : (
+                topViewed.map((post) => (
+                  <div key={post.id} className="flex items-center justify-between gap-3 border-b border-white/5 pb-3 text-sm">
+                    <span className="truncate text-white/80">{post.title}</span>
+                    <span className="shrink-0 font-mono text-xs text-rd-redlight">{post.views} vues</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1464,6 +1516,89 @@ function EditPageForm({ page, onDone }: { page: AdminPageItem; onDone: () => voi
       </button>
       {status ? <p className="text-sm text-white/60">{status}</p> : null}
     </form>
+  );
+}
+
+// ---------- Docs : comment ecrire un article ----------
+
+function DocsPanel() {
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div>
+        <p className="text-sm uppercase tracking-[0.3em] text-rd-red">Guide de rédaction</p>
+        <h2 className="mt-2 font-display text-2xl font-semibold">Comment écrire un bon article</h2>
+        <p className="mt-2 text-sm text-white/60">
+          Vos articles s&apos;écrivent en <strong>Markdown</strong> : une syntaxe simple qui se transforme
+          automatiquement en mise en page soignée (titres, listes, tableaux, images…).
+        </p>
+      </div>
+
+      <DocCard title="1. Structurer avec des titres">
+        <p>Utilisez <code># </code>, <code>## </code> et <code>### </code> en début de ligne pour créer les titres.</p>
+        <pre>{`# Titre principal de section
+## Sous-titre
+### Sous-sous-titre`}</pre>
+        <p className="text-white/50">Les titres alimentent automatiquement le sommaire déroulant de l&apos;article.</p>
+      </DocCard>
+
+      <DocCard title="2. Mettre en forme le texte">
+        <pre>{`**texte en gras**
+*texte en italique*
+[un lien](https://exemple.com)`}</pre>
+      </DocCard>
+
+      <DocCard title="3. Listes">
+        <pre>{`- Premier point
+- Deuxième point
+- Troisième point
+
+1. Étape une
+2. Étape deux`}</pre>
+      </DocCard>
+
+      <DocCard title="4. Insérer une image">
+        <p>
+          Dans le formulaire d&apos;article, cliquez sur <strong>« Insérer une image »</strong> : le fichier est
+          téléversé et le code ci-dessous s&apos;ajoute tout seul à l&apos;endroit du curseur.
+        </p>
+        <pre>{`![Description de l'image](https://.../mon-image.jpg)`}</pre>
+      </DocCard>
+
+      <DocCard title="5. Tableaux">
+        <pre>{`| Critère    | Option A | Option B |
+| ---------- | -------- | -------- |
+| Prix       | Bas      | Élevé    |
+| Simplicité | Oui      | Non      |`}</pre>
+      </DocCard>
+
+      <DocCard title="6. Bloc de code et citation">
+        <pre>{`\`\`\`
+ligne de code ou commande
+\`\`\`
+
+> Une citation mise en avant`}</pre>
+      </DocCard>
+
+      <DocCard title="Conseils pour être lu jusqu'au bout">
+        <ul className="list-disc space-y-1 pl-5 text-white/70">
+          <li>Un <strong>extrait</strong> clair et accrocheur : c&apos;est ce qu&apos;on lit avant de cliquer.</li>
+          <li>Des <strong>titres courts</strong> qui découpent l&apos;article en sections digestes.</li>
+          <li>Une <strong>image de couverture</strong> attrayante et des illustrations pour aérer.</li>
+          <li>Des phrases courtes, un ton direct, et un appel à commenter/partager à la fin.</li>
+        </ul>
+      </DocCard>
+    </div>
+  );
+}
+
+function DocCard({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-rd-line bg-rd-graphite p-6">
+      <h3 className="font-display text-lg font-semibold text-white">{title}</h3>
+      <div className="mt-3 space-y-3 text-sm text-white/70 [&_code]:rounded [&_code]:border [&_code]:border-rd-line [&_code]:bg-rd-deep [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs [&_code]:text-rd-redlight [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:border [&_pre]:border-rd-line [&_pre]:bg-rd-deep [&_pre]:p-4 [&_pre]:font-mono [&_pre]:text-xs [&_pre]:leading-relaxed [&_pre]:text-white/80">
+        {children}
+      </div>
+    </div>
   );
 }
 

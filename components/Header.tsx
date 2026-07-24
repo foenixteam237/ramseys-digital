@@ -364,13 +364,13 @@ export default function Header() {
                         {session.user.email}
                       </p>
                     </div>
-                    {session.user.role === "ADMIN" ? (
+                    {session.user.role === "ADMIN" || session.user.role === "EDITOR" ? (
                       <Link
                         href="/admin"
                         onClick={() => setUserDropdownOpen(false)}
                         className="mt-1 flex w-full items-center rounded-lg px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.05] hover:text-white"
                       >
-                        Tableau de bord
+                        {session.user.role === "ADMIN" ? "Tableau de bord" : "Espace rédacteur"}
                       </Link>
                     ) : null}
                     <button
