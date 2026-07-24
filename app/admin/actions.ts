@@ -21,7 +21,7 @@ const updatePostSchema = createPostSchema.extend({
   postId: z.string().min(1),
 });
 
-const roleSchema = z.enum(['ADMIN', 'VISITOR']);
+const roleSchema = z.enum(['ADMIN', 'EDITOR', 'VISITOR']);
 
 const combiningMarksPattern = new RegExp(
   '[' + String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f) + ']',
@@ -119,6 +119,7 @@ export async function createPostAction(formData: FormData) {
     content,
     published: isPublished,
     author_id: authorId,
+    author_name: user.name ?? null,
     category_id: categoryId || null,
     cover_image_url: coverImageUrl || null,
   });
@@ -244,6 +245,25 @@ export async function updateUserRoleAction(userId: string, role: string) {
 
   if (error) {
     throw new Error(`Impossible de mettre à jour le rôle : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+}
+
+export async function setUserActiveAction(userId: string, active: boolean) {
+  const currentUser = await requireAdmin();
+
+  if (userId === currentUser.id && !active) {
+    throw new Error('Vous ne pouvez pas désactiver votre propre compte.');
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase.from('users').update({ active }).eq('id', userId);
+
+  if (error) {
+    throw new Error(`Impossible de mettre à jour le compte : ${error.message}`);
   }
 
   revalidatePath('/admin');

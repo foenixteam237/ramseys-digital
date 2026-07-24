@@ -28,8 +28,8 @@ declare module 'next-auth/jwt' {
 }
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().trim().toLowerCase().email().max(120),
+  password: z.string().min(8).max(200),
 });
 
 export const authOptions: NextAuthOptions = {
@@ -55,7 +55,7 @@ export const authOptions: NextAuthOptions = {
         const supabase = createClient(cookieStore);
         const { data: user, error } = await supabase
           .from('users')
-          .select('id, name, email, role, password_hash, avatar_url, email_verified')
+          .select('id, name, email, role, password_hash, avatar_url, email_verified, active')
           .eq('email', email)
           .maybeSingle();
 
@@ -67,6 +67,10 @@ export const authOptions: NextAuthOptions = {
 
         if (!passwordMatches) {
           return null;
+        }
+
+        if (user.active === false) {
+          throw new Error('ACCOUNT_DISABLED');
         }
 
         if (!user.email_verified) {

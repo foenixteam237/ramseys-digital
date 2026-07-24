@@ -14,6 +14,7 @@ export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Status State
   const [error, setError] = useState('');
@@ -38,6 +39,8 @@ export default function LoginForm() {
         setLoading(false);
         if (result.error.includes('EMAIL_NOT_VERIFIED')) {
           setError('Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte de réception.');
+        } else if (result.error.includes('ACCOUNT_DISABLED')) {
+          setError('Votre compte a été désactivé. Contactez un administrateur.');
         } else {
           setError('Identifiants invalides. Vérifiez votre email et votre mot de passe.');
         }
@@ -147,14 +150,34 @@ export default function LoginForm() {
         {/* Password */}
         <label className="block text-sm text-white/80">
           <span className="mb-2 block font-medium">Mot de passe</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-xl border border-rd-line bg-rd-deep px-4 py-3 text-white outline-none ring-0 focus:border-rd-red/60 transition-colors"
-            placeholder="••••••••"
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="w-full rounded-xl border border-rd-line bg-rd-deep px-4 py-3 pr-12 text-white outline-none ring-0 focus:border-rd-red/60 transition-colors"
+              placeholder="••••••••"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+              className="absolute inset-y-0 right-0 flex items-center pr-4 text-white/50 hover:text-white"
+            >
+              {showPassword ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+                  <path d="M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 4 10 7a12 12 0 0 1-2.4 3.4M6.1 6.1A12 12 0 0 0 2 12c1 3 5 7 10 7a9.7 9.7 0 0 0 4-.9" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
         </label>
 
         {/* Confirm Password (Registration Only) */}
@@ -162,7 +185,7 @@ export default function LoginForm() {
           <label className="block text-sm text-white/80">
             <span className="mb-2 block font-medium">Confirmer le mot de passe</span>
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               className="w-full rounded-xl border border-rd-line bg-rd-deep px-4 py-3 text-white outline-none ring-0 focus:border-rd-red/60 transition-colors"

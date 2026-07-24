@@ -14,6 +14,7 @@ export interface PostComment {
   user_id: string;
   post_id: string;
   created_at: string;
+  author_name?: string | null;
   user?: {
     id: string;
     name: string;
@@ -34,6 +35,9 @@ function firstOf<T>(value: T | T[] | null | undefined): T | undefined {
 
 const normalizePost = (post: Record<string, unknown>) => {
   const category = firstOf(post.category as { name?: string } | { name?: string }[] | null);
+  const author = firstOf(post.author as { name?: string } | { name?: string }[] | null);
+  // Le nom denormalise (author_name) prime : il survit a la suppression de l'auteur.
+  const authorName = (post.author_name as string | undefined) ?? author?.name ?? 'Ramseys Digital';
 
   return {
     id: post.id as string,
@@ -43,12 +47,14 @@ const normalizePost = (post: Record<string, unknown>) => {
     content: (post.content as string | undefined) ?? '',
     published: (post.published as boolean | undefined) ?? false,
     authorId: (post.author_id as string | undefined) ?? (post.authorId as string | undefined) ?? null,
+    authorName,
     author: (post.author as Record<string, unknown> | undefined) ?? null,
     createdAt: (post.created_at as string | undefined) ?? (post.createdAt as string | undefined) ?? new Date().toISOString(),
     updatedAt: (post.updated_at as string | undefined) ?? (post.updatedAt as string | undefined) ?? new Date().toISOString(),
     coverImageUrl: (post.cover_image_url as string | null) ?? (post.coverImageUrl as string | null) ?? null,
     categoryId: (post.category_id as string | null) ?? null,
     categoryName: category?.name ?? null,
+    views: (post.views as number | undefined) ?? 0,
     likes: (Array.isArray(post.likes) ? post.likes : []) as PostLike[],
     comments: (Array.isArray(post.comments) ? post.comments : []) as PostComment[],
     shares: (Array.isArray(post.shares) ? post.shares : []) as PostShare[],

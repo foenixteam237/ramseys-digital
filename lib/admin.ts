@@ -10,10 +10,12 @@ export interface AdminPost {
   published: boolean;
   createdAt: string;
   updatedAt: string;
+  authorId: string | null;
   authorName: string;
   categoryId: string | null;
   categoryName: string | null;
   coverImageUrl: string | null;
+  views: number;
   likesCount: number;
   commentsCount: number;
   sharesCount: number;
@@ -27,6 +29,7 @@ export interface AdminUser {
   name: string;
   email: string;
   role: string;
+  active: boolean;
   createdAt: string;
 }
 
@@ -75,7 +78,7 @@ export async function getAllPostsForAdmin(): Promise<AdminPost[]> {
   const { data, error } = await supabase
     .from('posts')
     .select(
-      'id, title, slug, excerpt, content, published, created_at, updated_at, cover_image_url, category_id, ' +
+      'id, title, slug, excerpt, content, published, created_at, updated_at, cover_image_url, category_id, author_id, author_name, views, ' +
         'author:users(name), category:categories(name), likes(created_at), comments(created_at), shares(created_at)',
     )
     .order('created_at', { ascending: false });
@@ -102,10 +105,12 @@ export async function getAllPostsForAdmin(): Promise<AdminPost[]> {
       published: post.published as boolean,
       createdAt: post.created_at as string,
       updatedAt: post.updated_at as string,
-      authorName: author?.name ?? 'Inconnu',
+      authorId: (post.author_id as string | null) ?? null,
+      authorName: (post.author_name as string | undefined) ?? author?.name ?? 'Auteur supprimé',
       categoryId: (post.category_id as string | null) ?? null,
       categoryName: category?.name ?? null,
       coverImageUrl: (post.cover_image_url as string | null) ?? null,
+      views: (post.views as number | undefined) ?? 0,
       likesCount: likes.length,
       commentsCount: comments.length,
       sharesCount: shares.length,
@@ -122,7 +127,7 @@ export async function getAllUsers(): Promise<AdminUser[]> {
 
   const { data, error } = await supabase
     .from('users')
-    .select('id, name, email, role, created_at')
+    .select('id, name, email, role, active, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -135,6 +140,7 @@ export async function getAllUsers(): Promise<AdminUser[]> {
     name: user.name,
     email: user.email,
     role: user.role,
+    active: user.active ?? true,
     createdAt: user.created_at,
   }));
 }
@@ -145,7 +151,7 @@ export async function getAllCommentsForAdmin(): Promise<AdminComment[]> {
 
   const { data, error } = await supabase
     .from('comments')
-    .select('id, content, created_at, user:users(name), post:posts(title, slug)')
+    .select('id, content, created_at, author_name, user:users(name), post:posts(title, slug)')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -164,7 +170,7 @@ export async function getAllCommentsForAdmin(): Promise<AdminComment[]> {
       id: comment.id as string,
       content: comment.content as string,
       createdAt: comment.created_at as string,
-      authorName: user?.name ?? 'Utilisateur supprimé',
+      authorName: user?.name ?? (comment.author_name as string | undefined) ?? 'Utilisateur supprimé',
       postTitle: post?.title ?? 'Article supprimé',
       postSlug: post?.slug ?? '',
     };

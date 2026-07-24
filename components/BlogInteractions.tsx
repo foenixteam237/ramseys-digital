@@ -18,6 +18,7 @@ interface Comment {
   user_id: string;
   post_id: string;
   created_at: string;
+  author_name?: string | null;
   user?: {
     id: string;
     name: string;
@@ -292,7 +293,7 @@ export default function BlogInteractions({
         ) : (
           <div className="space-y-4">
             {comments.map((comment) => {
-              const authorName = comment.user?.name || "Utilisateur anonyme";
+              const authorName = comment.user?.name || comment.author_name || "Utilisateur anonyme";
               const initials = authorName
                 .split(" ")
                 .map((n) => n[0])

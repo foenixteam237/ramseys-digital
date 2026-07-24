@@ -25,6 +25,7 @@ import {
   updatePageAction,
   togglePagePublishedAction,
   deletePageAction,
+  setUserActiveAction,
 } from "./actions";
 import CreatePostForm from "./CreatePostForm";
 import ImageUploader from "./ImageUploader";
@@ -705,7 +706,7 @@ function PostsPanel({
                   </div>
                   <h3 className="mt-2 font-display text-lg font-semibold text-white">{post.title}</h3>
                   <p className="mt-1 text-sm text-white/60">
-                    {post.likesCount} likes · {post.commentsCount} commentaires · {post.sharesCount} partages
+                    {post.views} vues · {post.likesCount} likes · {post.commentsCount} commentaires · {post.sharesCount} partages
                   </p>
                 </div>
 
@@ -964,8 +965,7 @@ function UsersPanel({
     ? users.filter((user) => matches(user.name, search) || matches(user.email, search))
     : users;
 
-  const handleRoleToggle = (userId: string, currentRole: string) => {
-    const nextRole = currentRole === "ADMIN" ? "VISITOR" : "ADMIN";
+  const handleRoleChange = (userId: string, nextRole: string) => {
     setError("");
     startTransition(async () => {
       try {
@@ -977,8 +977,26 @@ function UsersPanel({
     });
   };
 
+  const handleActiveToggle = (userId: string, active: boolean) => {
+    setError("");
+    startTransition(async () => {
+      try {
+        await setUserActiveAction(userId, active);
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Erreur lors de la mise à jour du compte.");
+      }
+    });
+  };
+
   return (
     <div className="space-y-3">
+      <p className="text-xs text-white/50">
+        <span className="font-semibold text-white/70">ADMIN</span> : accès complet ·{" "}
+        <span className="font-semibold text-white/70">EDITOR</span> : rédige ses propres articles ·{" "}
+        <span className="font-semibold text-white/70">VISITOR</span> : lecteur (like/commentaire).
+      </p>
+
       {error ? (
         <p className="rounded-xl border border-rd-red/40 bg-rd-red/10 px-4 py-3 text-sm text-rd-redlight">{error}</p>
       ) : null}
@@ -989,30 +1007,42 @@ function UsersPanel({
           className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-rd-line bg-rd-deep p-4"
         >
           <div>
-            <p className="text-sm font-semibold text-white">
+            <p className="flex items-center gap-2 text-sm font-semibold text-white">
               {user.name}
               {user.id === currentUserId ? (
-                <span className="ml-2 text-xs font-normal text-white/40">(vous)</span>
+                <span className="text-xs font-normal text-white/40">(vous)</span>
+              ) : null}
+              {!user.active ? (
+                <span className="rounded-full bg-rd-red/15 px-2 py-0.5 text-[10px] font-mono uppercase text-rd-redlight">
+                  Désactivé
+                </span>
               ) : null}
             </p>
             <p className="text-xs text-white/40">
               {user.email} · inscrit le {new Date(user.createdAt).toLocaleDateString("fr-FR")}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${
-                user.role === "ADMIN" ? "bg-rd-red/20 text-rd-redlight" : "bg-white/10 text-white/50"
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={user.role}
+              onChange={(event) => handleRoleChange(user.id, event.target.value)}
+              disabled={isPending || user.id === currentUserId}
+              className="rounded-lg border border-rd-line bg-rd-graphite px-2.5 py-1.5 text-xs font-semibold text-white/80 outline-none disabled:opacity-40"
+            >
+              <option value="ADMIN">ADMIN</option>
+              <option value="EDITOR">EDITOR</option>
+              <option value="VISITOR">VISITOR</option>
+            </select>
+            <button
+              onClick={() => handleActiveToggle(user.id, !user.active)}
+              disabled={isPending || user.id === currentUserId}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-40 ${
+                user.active
+                  ? "border-rd-red/40 text-rd-redlight hover:bg-rd-red/10"
+                  : "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
               }`}
             >
-              {user.role}
-            </span>
-            <button
-              onClick={() => handleRoleToggle(user.id, user.role)}
-              disabled={isPending || user.id === currentUserId}
-              className="rounded-lg border border-rd-line px-3 py-1.5 text-xs font-semibold text-white/80 hover:border-white/40 disabled:opacity-40"
-            >
-              {user.role === "ADMIN" ? "Retirer admin" : "Passer admin"}
+              {user.active ? "Désactiver" : "Réactiver"}
             </button>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { getCurrentUser } from '@/lib/session';
 import BlogInteractions from '@/components/BlogInteractions';
 import ArticleBody from '@/components/ArticleBody';
 import TableOfContents from '@/components/TableOfContents';
+import ViewCounter from '@/components/ViewCounter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -26,12 +27,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     .filter((candidate) => candidate.id !== post.id && post.categoryId && candidate.categoryId === post.categoryId)
     .slice(0, 3);
 
-  const authorName = (post.author?.name as string | undefined) ?? 'Ramseys Digital';
+  const authorName = post.authorName;
   const readingMinutes = estimateReadingTime(post.content);
   const toc = extractToc(post.content);
 
   return (
     <div className="min-h-screen bg-rd-deep text-white antialiased">
+      <ViewCounter postId={post.id} />
       <Header />
       <main className="pb-24 pt-32">
         <div className="mx-auto max-w-4xl px-6">

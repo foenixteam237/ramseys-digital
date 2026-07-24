@@ -17,7 +17,7 @@ export default async function BlogPage() {
     createdAt: post.createdAt,
     coverImageUrl: post.coverImageUrl,
     categoryName: post.categoryName,
-    authorName: (post.author?.name as string | undefined) ?? 'Ramseys Digital',
+    authorName: post.authorName,
     likesCount: post.likes.length,
     commentsCount: post.comments.length,
   }));

@@ -7,10 +7,26 @@ import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 import { sendEmail, buildVerificationEmail, getSiteUrl } from '@/lib/email';
 
+const CONTROL_OR_ANGLE = /[\u0000-\u001f<>]/;
+
 const signUpSchema = z.object({
-  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères.'),
-  email: z.string().email('Format d’email invalide.'),
-  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères.'),
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Le nom doit contenir au moins 2 caractères.')
+    .max(80, 'Le nom est trop long.')
+    // Rejette chevrons et caracteres de controle (protection XSS / injection d'en-tetes)
+    .refine((value) => !CONTROL_OR_ANGLE.test(value), 'Le nom contient des caractères non autorisés.'),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email('Format d’email invalide.')
+    .max(120, 'L’adresse email est trop longue.'),
+  password: z
+    .string()
+    .min(8, 'Le mot de passe doit contenir au moins 8 caractères.')
+    .max(200, 'Le mot de passe est trop long.'),
 });
 
 export async function signUpAction(formData: FormData) {

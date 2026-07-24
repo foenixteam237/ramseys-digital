@@ -11,6 +11,22 @@ const shareSchema = z.object({
   platform: z.enum(['WHATSAPP', 'FACEBOOK', 'LINKEDIN', 'COPY_LINK']),
 });
 
+// Comptabilise une vue d'article (appelee depuis le navigateur).
+export async function registerPostViewAction(postId: string) {
+  if (!postId || typeof postId !== 'string') {
+    return;
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase.rpc('increment_post_views', { p_id: postId });
+
+  if (error) {
+    console.error('registerPostViewAction error:', error.message);
+  }
+}
+
 // 0. Record a share
 export async function recordShareAction(
   postId: string,
@@ -135,6 +151,7 @@ export async function addCommentAction(postId: string, content: string) {
       user_id: user.id,
       post_id: postId,
       content: content.trim(),
+      author_name: user.name ?? null,
     });
 
   if (insertError) {
