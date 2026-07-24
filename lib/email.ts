@@ -1,6 +1,27 @@
-import { Resend } from 'resend';
+import nodemailer, { type Transporter } from 'nodemailer';
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Compte Gmail utilise pour l'envoi (adresse complete) et mot de passe
+// d'application Google (16 caracteres, genere apres activation de la 2FA).
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+
+let transporter: Transporter | null = null;
+
+function getTransporter(): Transporter | null {
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    return null;
+  }
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_APP_PASSWORD,
+      },
+    });
+  }
+  return transporter;
+}
 
 export function getSiteUrl(): string {
   return process.env.NEXTAUTH_URL || 'http://localhost:3000';
@@ -13,17 +34,24 @@ interface SendEmailInput {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailInput): Promise<void> {
-  if (!resend) {
-    console.warn(`RESEND_API_KEY absent : email "${subject}" à ${to} non envoyé.`);
+  const mailer = getTransporter();
+
+  if (!mailer) {
+    console.warn(`GMAIL_USER/GMAIL_APP_PASSWORD absents : email "${subject}" à ${to} non envoyé.`);
     return;
   }
 
-  const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const fromName = process.env.EMAIL_FROM_NAME || 'Ramseys Digital';
 
-  const { error } = await resend.emails.send({ from, to, subject, html });
-
-  if (error) {
-    console.error('sendEmail error:', error.message);
+  try {
+    await mailer.sendMail({
+      from: `"${fromName}" <${GMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error('sendEmail error:', error instanceof Error ? error.message : error);
   }
 }
 
