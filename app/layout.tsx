@@ -28,6 +28,8 @@ export const metadata: Metadata = {
 
 import { Providers } from "./providers";
 
+const themeScript = `(function(){try{var t=localStorage.getItem('theme')||'light';if(t==='system'){document.documentElement.removeAttribute('data-theme');}else{document.documentElement.setAttribute('data-theme',t);}}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,6 +40,9 @@ export default function RootLayout({
       lang="fr"
       className={`${spaceGrotesk.variable} ${inter.variable} ${jetBrainsMono.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-full bg-rd-deep text-white">
         <Providers>{children}</Providers>
       </body>

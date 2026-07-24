@@ -5,54 +5,60 @@ export interface YoutubeVideo {
   publishedAt: string;
 }
 
-interface YoutubePlaylistItem {
-  snippet?: {
-    title?: string;
-    publishedAt?: string;
-    resourceId?: { videoId?: string };
-    thumbnails?: {
-      medium?: { url?: string };
-      default?: { url?: string };
-    };
-  };
-}
-
 const CHANNEL_ID = 'UCZ7oJA0u6vjhtNCXqerWMtQ';
 
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+}
+
+/**
+ * Récupère les dernières vidéos de la chaîne via le flux RSS public de
+ * YouTube. Aucune clé API n'est nécessaire : le flux est public, gratuit
+ * et sans quota.
+ */
 export async function getChannelVideos(maxResults = 6): Promise<YoutubeVideo[]> {
-  const apiKey = process.env.YOUTUBE_API_KEY;
-
-  if (!apiKey) {
-    console.warn('YOUTUBE_API_KEY absent : impossible de récupérer les vidéos YouTube.');
-    return [];
-  }
-
-  // The uploads playlist of any channel is its channel ID with "UC" replaced by "UU".
-  const uploadsPlaylistId = `UU${CHANNEL_ID.slice(2)}`;
-  const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
-  url.searchParams.set('part', 'snippet');
-  url.searchParams.set('playlistId', uploadsPlaylistId);
-  url.searchParams.set('maxResults', String(maxResults));
-  url.searchParams.set('key', apiKey);
+  const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`;
 
   try {
-    const response = await fetch(url.toString(), { next: { revalidate: 3600 } });
+    const response = await fetch(feedUrl, { next: { revalidate: 3600 } });
 
     if (!response.ok) {
-      console.error('getChannelVideos error:', await response.text());
+      console.error('getChannelVideos error: flux RSS indisponible', response.status);
       return [];
     }
 
-    const data = (await response.json()) as { items?: YoutubePlaylistItem[] };
+    const xml = await response.text();
+    const entries = xml.split('<entry>').slice(1);
+    const videos: YoutubeVideo[] = [];
 
-    return (data.items ?? [])
-      .filter((item) => item.snippet?.resourceId?.videoId)
-      .map((item) => ({
-        id: item.snippet!.resourceId!.videoId as string,
-        title: item.snippet?.title ?? '',
-        thumbnailUrl: item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url ?? '',
-        publishedAt: item.snippet?.publishedAt ?? '',
-      }));
+    for (const entry of entries) {
+      const videoId = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1];
+      const rawTitle = entry.match(/<title>([\s\S]*?)<\/title>/)?.[1];
+      const published = entry.match(/<published>([^<]+)<\/published>/)?.[1];
+
+      if (!videoId) {
+        continue;
+      }
+
+      videos.push({
+        id: videoId,
+        title: rawTitle ? decodeXmlEntities(rawTitle.trim()) : '',
+        thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        publishedAt: published ?? '',
+      });
+
+      if (videos.length >= maxResults) {
+        break;
+      }
+    }
+
+    return videos;
   } catch (err) {
     console.error('getChannelVideos fetch failed:', err);
     return [];

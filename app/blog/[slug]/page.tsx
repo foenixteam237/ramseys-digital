@@ -1,10 +1,12 @@
-import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPostBySlug, getPublishedPosts } from '@/lib/blog';
 import { estimateReadingTime } from '@/lib/readingtime';
+import { extractToc } from '@/lib/toc';
 import { getCurrentUser } from '@/lib/session';
 import BlogInteractions from '@/components/BlogInteractions';
+import ArticleBody from '@/components/ArticleBody';
+import TableOfContents from '@/components/TableOfContents';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -26,6 +28,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   const authorName = (post.author?.name as string | undefined) ?? 'Ramseys Digital';
   const readingMinutes = estimateReadingTime(post.content);
+  const toc = extractToc(post.content);
 
   return (
     <div className="min-h-screen bg-rd-deep text-white antialiased">
@@ -52,7 +55,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               className="h-64 w-full rounded-2xl border border-rd-line object-cover sm:h-80"
             />
           ) : (
-                        <div className="grid-bg red-glow-radial flex h-64 w-full items-center justify-center rounded-2xl border border-rd-line bg-rd-graphite sm:h-80">
+            <div className="grid-bg red-glow-radial flex h-64 w-full items-center justify-center rounded-2xl border border-rd-line bg-rd-graphite sm:h-80">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="Ramseys Digital" className="h-24 w-24 object-contain opacity-60" />
             </div>
@@ -84,8 +87,18 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               <span>{readingMinutes} min de lecture</span>
             </div>
 
-            <div className="prose prose-invert mt-8 max-w-none text-white/90">
-              <ReactMarkdown>{post.content}</ReactMarkdown>
+            <div className="mt-10">
+              <TableOfContents items={toc} />
+              <ArticleBody content={post.content} />
+            </div>
+
+            <div className="mt-12 rounded-2xl border border-rd-red/30 bg-rd-red/5 p-6 text-center">
+              <p className="font-display text-lg font-semibold text-white">
+                Cet article vous a été utile ?
+              </p>
+              <p className="mt-1 text-sm text-white/60">
+                Aimez-le pour nous soutenir, partagez-le à votre réseau et laissez-nous un commentaire ci-dessous.
+              </p>
             </div>
 
             <BlogInteractions

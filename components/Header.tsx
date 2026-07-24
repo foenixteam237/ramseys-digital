@@ -11,6 +11,7 @@ import {
   toggleNotificationPreferenceAction,
   getUserNotificationPreferencesAction
 } from "@/app/blog/blog-actions";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface Notification {
   id: string;
@@ -152,7 +153,7 @@ export default function Header() {
           <Link href={getNavLink("#temoignages")} className="nav-link hover:text-white">
             Témoignages
           </Link>
-                    <Link href={getNavLink("#videos")} className="nav-link hover:text-white">
+          <Link href={getNavLink("#videos")} className="nav-link hover:text-white">
             Vidéos
           </Link>
           <Link href={getNavLink("#contact")} className="nav-link hover:text-white">
@@ -170,6 +171,7 @@ export default function Header() {
 
         {/* Action / User Bar */}
         <div className="flex items-center gap-4">
+          <ThemeToggle />
           {session?.user ? (
             <>
               {/* Notification Center */}
@@ -443,7 +445,7 @@ export default function Header() {
           >
             Témoignages
           </Link>
-                    <Link
+          <Link
             href={getNavLink("#videos")}
             className="border-b border-white/5 py-3 text-white/80 hover:text-white"
             onClick={() => setMobileMenuOpen(false)}

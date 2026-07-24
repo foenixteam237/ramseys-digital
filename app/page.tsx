@@ -129,7 +129,7 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [dbStatus, setDbStatus] = useState("Vérification de la table posts…");
-   const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({
     name: "",
     contact: "",
     need: "",
@@ -314,7 +314,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="stats" className="border-t border-white/5 bg-gradient-to-b from-rd-deep to-[#140506] py-24">
+        <section id="stats" className="border-t border-white/5 bg-gradient-to-b from-rd-deep to-rd-graphite py-24">
           <div className="mx-auto max-w-7xl px-6 lg:px-10">
             <div className="grid grid-cols-2 gap-8 text-center lg:grid-cols-4">
               <div className="reveal">
@@ -363,7 +363,8 @@ export default function Home() {
             </div>
           </div>
         </section>
-                {videos.length > 0 ? (
+
+        {videos.length > 0 ? (
           <section id="videos" className="border-t border-white/5 py-28">
             <div className="mx-auto max-w-7xl px-6 lg:px-10">
               <div className="reveal mb-16 flex flex-wrap items-end justify-between gap-4">
@@ -485,7 +486,7 @@ export default function Home() {
                 <a href="https://wa.me/237657828457" aria-label="WhatsApp" className="flex h-10 w-10 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60 hover:text-rd-red">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.6 14.3c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.7-1.2-4.4-3.9-4.6-4.1-.1-.2-1.1-1.4-1.1-2.7s.7-1.9 1-2.2c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.2.1.3 0 .5-.1.2-.2.3-.3.5-.2.2-.3.3-.1.6.2.3.9 1.4 1.9 2.3 1.3 1.1 2.3 1.5 2.6 1.6.3.1.5.1.6-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1l1.7.8c.2.1.4.2.4.3.1.2.1.8-.1 1.3Z" /></svg>
                 </a>
-                                <a href="https://www.linkedin.com/in/dilane-aanopelba-diebalbe-8167aa274" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="flex h-10 w-10 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60 hover:text-rd-red">
+                <a href="https://www.linkedin.com/in/dilane-aanopelba-diebalbe-8167aa274" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="flex h-10 w-10 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60 hover:text-rd-red">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM3 9h4v12H3V9Zm7 0h3.8v1.7h.05c.5-1 1.8-2 3.7-2 4 0 4.7 2.6 4.7 6v6.3h-4v-5.6c0-1.3 0-3-1.9-3s-2.2 1.4-2.2 2.9V21h-4V9Z" /></svg>
                 </a>
                 <a href="https://www.youtube.com/channel/UCZ7oJA0u6vjhtNCXqerWMtQ" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="flex h-10 w-10 items-center justify-center rounded-lg border border-rd-line bg-rd-graphite transition-colors hover:border-rd-red/60 hover:text-rd-red">

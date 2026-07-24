@@ -46,6 +46,7 @@ async function requireAdmin() {
 
   return user;
 }
+
 async function notifyNewPost(post: {
   title: string;
   excerpt: string;
@@ -86,6 +87,7 @@ async function notifyNewPost(post: {
       .map((recipient) => sendEmail({ to: recipient.email as string, subject, html })),
   );
 }
+
 export async function createPostAction(formData: FormData) {
   const user = await requireAdmin();
 
@@ -108,7 +110,7 @@ export async function createPostAction(formData: FormData) {
   const authorId = user.id;
   const slug = `${slugify(title)}-${Date.now()}`;
 
-const isPublished = published ?? true;
+  const isPublished = published ?? true;
 
   const { error } = await supabase.from('posts').insert({
     title,
@@ -122,7 +124,7 @@ const isPublished = published ?? true;
   });
 
   if (error) {
-    throw new Error(`Impossible de publier l'article : ${error.message}`);
+    throw new Error(`Impossible de publier l’article : ${error.message}`);
   }
 
   if (isPublished) {
@@ -343,6 +345,48 @@ export async function deleteMediaAction(mediaId: string, filename: string, url: 
   }
 
   revalidatePath('/admin');
+}
+
+// Upload d'une image depuis l'éditeur d'article : téléverse vers Supabase
+// Storage, enregistre dans la bibliothèque média et renvoie l'URL publique
+// pour l'insérer dans le contenu ou comme image de couverture.
+export async function uploadImageAction(formData: FormData): Promise<{ url: string }> {
+  const user = await requireAdmin();
+
+  const file = formData.get('file');
+
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error('Aucun fichier sélectionné.');
+  }
+
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Le fichier doit être une image.');
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const path = `${Date.now()}-${slugify(file.name)}`;
+
+  const { error: uploadError } = await supabase.storage.from('media').upload(path, file, {
+    contentType: file.type || undefined,
+  });
+
+  if (uploadError) {
+    throw new Error(`Impossible d’envoyer l’image : ${uploadError.message}`);
+  }
+
+  const { data: publicUrlData } = supabase.storage.from('media').getPublicUrl(path);
+
+  await supabase.from('media').insert({
+    filename: file.name,
+    url: publicUrlData.publicUrl,
+    size_bytes: file.size,
+    uploaded_by: user.id,
+  });
+
+  revalidatePath('/admin');
+
+  return { url: publicUrlData.publicUrl };
 }
 
 const pageSchema = z.object({

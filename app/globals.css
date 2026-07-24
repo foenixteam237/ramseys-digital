@@ -1,15 +1,56 @@
 @import "tailwindcss";
 
-@theme inline {
+/* Les couleurs sont definies comme variables (non inline) pour pouvoir
+   basculer entre theme clair et sombre. Valeurs par defaut = theme clair. */
+@theme {
   --color-rd-red: #d61f26;
-  --color-rd-redlight: #ff3b44;
-  --color-rd-black: #111111;
-  --color-rd-deep: #0a0a0a;
-  --color-rd-graphite: #1b1b1d;
-  --color-rd-line: #2a2a2d;
+  --color-rd-redlight: #e11d24;
+  --color-rd-black: #ffffff;
+  --color-rd-deep: #f6f7f9;
+  --color-rd-graphite: #ffffff;
+  --color-rd-line: #e5e5ea;
+  --color-white: #1a1a1e;
   --font-display: var(--font-space-grotesk);
   --font-body: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
+}
+
+/* Variables semantiques additionnelles (theme clair par defaut) */
+:root {
+  color-scheme: light;
+  --code-bg: #f3f3f6;
+  --surface-alt: #f2f2f5;
+  --grid-line: rgba(0, 0, 0, 0.04);
+}
+
+/* Theme sombre : choix explicite */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-rd-redlight: #ff3b44;
+  --color-rd-black: #111111;
+  --color-rd-deep: #0e0e10;
+  --color-rd-graphite: #1b1b1d;
+  --color-rd-line: #2a2a2d;
+  --color-white: #ffffff;
+  --code-bg: #0d0e0f;
+  --surface-alt: #1b1b1d;
+  --grid-line: rgba(255, 255, 255, 0.035);
+}
+
+/* Theme systeme : suit les preferences de l'OS quand aucun choix explicite */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-rd-redlight: #ff3b44;
+    --color-rd-black: #111111;
+    --color-rd-deep: #0e0e10;
+    --color-rd-graphite: #1b1b1d;
+    --color-rd-line: #2a2a2d;
+    --color-white: #ffffff;
+    --code-bg: #0d0e0f;
+    --surface-alt: #1b1b1d;
+    --grid-line: rgba(255, 255, 255, 0.035);
+  }
 }
 
 html {
@@ -17,8 +58,8 @@ html {
 }
 
 body {
-  background: #0a0a0a;
-  color: #ffffff;
+  background: var(--color-rd-deep);
+  color: var(--color-white);
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 }
 
@@ -36,15 +77,16 @@ body {
 
 .grid-bg {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 44px 44px;
 }
 
 .red-glow-radial {
-  background: radial-gradient(ellipse 60% 50% at 75% 25%, rgba(214, 31, 38, 0.28), transparent 60%);
+  background: radial-gradient(ellipse 60% 50% at 75% 25%, rgba(214, 31, 38, 0.22), transparent 60%);
 }
 
+/* Le rack "datacenter" reste volontairement sombre dans les deux themes */
 .rack {
   background: linear-gradient(180deg, #17181a 0%, #0d0e0f 100%);
   border: 1px solid #2c2c2f;
@@ -54,6 +96,11 @@ body {
 .rack-unit {
   background: linear-gradient(180deg, #202124 0%, #17181a 100%);
   border: 1px solid #2f3033;
+}
+
+.rack .font-mono,
+.rack span {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .led {
@@ -137,6 +184,7 @@ body {
 .btn-primary {
   background: linear-gradient(135deg, #d61f26, #a6151a);
   box-shadow: 0 10px 30px -8px rgba(214, 31, 38, 0.55);
+  color: #ffffff;
 }
 
 .btn-primary:hover {
@@ -168,7 +216,13 @@ body {
 
 ::selection {
   background: #d61f26;
-  color: white;
+  color: #ffffff;
+}
+
+/* Texte blanc garanti sur les elements a fond rouge plein (boutons, badges),
+   quel que soit le theme. Regle hors @layer : prioritaire sur les utilitaires. */
+.bg-rd-red {
+  color: #ffffff;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -183,4 +237,188 @@ body {
     opacity: 1 !important;
     transform: none !important;
   }
+}
+
+/* ---------- Article typography ---------- */
+
+.article-content {
+  color: color-mix(in srgb, var(--color-white) 85%, transparent);
+  font-size: 1.05rem;
+  line-height: 1.85;
+}
+
+.article-content > *:first-child {
+  margin-top: 0;
+}
+
+.article-content h1,
+.article-content h2,
+.article-content h3,
+.article-content h4 {
+  font-family: var(--font-space-grotesk), sans-serif;
+  color: var(--color-white);
+  font-weight: 600;
+  line-height: 1.25;
+  scroll-margin-top: 110px;
+}
+
+.article-content h1 {
+  font-size: 1.9rem;
+  margin: 3rem 0 1.25rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--color-rd-line);
+}
+
+.article-content h2 {
+  font-size: 1.5rem;
+  margin: 2.5rem 0 1rem;
+  padding-left: 0.85rem;
+  border-left: 3px solid #d61f26;
+}
+
+.article-content h3 {
+  font-size: 1.2rem;
+  margin: 2rem 0 0.75rem;
+  color: color-mix(in srgb, var(--color-white) 94%, transparent);
+}
+
+.article-content h4 {
+  font-size: 1.05rem;
+  margin: 1.5rem 0 0.5rem;
+  color: color-mix(in srgb, var(--color-white) 92%, transparent);
+}
+
+.article-content p {
+  margin: 1.15rem 0;
+}
+
+.article-content a {
+  color: #d61f26;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(214, 31, 38, 0.4);
+  transition: border-color 0.2s ease;
+}
+
+.article-content a:hover {
+  border-bottom-color: #d61f26;
+}
+
+.article-content strong {
+  color: var(--color-white);
+  font-weight: 600;
+}
+
+.article-content em {
+  color: color-mix(in srgb, var(--color-white) 78%, transparent);
+}
+
+.article-content ul,
+.article-content ol {
+  margin: 1.15rem 0;
+  padding-left: 1.5rem;
+}
+
+.article-content li {
+  margin: 0.5rem 0;
+  padding-left: 0.35rem;
+}
+
+.article-content ul li::marker {
+  color: #d61f26;
+}
+
+.article-content ol li::marker {
+  color: #d61f26;
+  font-weight: 600;
+}
+
+.article-content blockquote {
+  margin: 1.75rem 0;
+  padding: 0.5rem 1.25rem;
+  border-left: 3px solid #d61f26;
+  background: rgba(214, 31, 38, 0.06);
+  border-radius: 0 8px 8px 0;
+  color: color-mix(in srgb, var(--color-white) 72%, transparent);
+  font-style: italic;
+}
+
+.article-content blockquote p {
+  margin: 0.5rem 0;
+}
+
+.article-content code {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.85em;
+  background: var(--code-bg);
+  border: 1px solid var(--color-rd-line);
+  color: #d61f26;
+  padding: 0.15rem 0.4rem;
+  border-radius: 5px;
+}
+
+.article-content pre {
+  margin: 1.75rem 0;
+  padding: 1.15rem 1.25rem;
+  background: var(--code-bg);
+  border: 1px solid var(--color-rd-line);
+  border-radius: 12px;
+  overflow-x: auto;
+  line-height: 1.6;
+}
+
+.article-content pre code {
+  background: transparent;
+  border: none;
+  color: color-mix(in srgb, var(--color-white) 88%, transparent);
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+.article-table-wrap {
+  margin: 1.75rem 0;
+  overflow-x: auto;
+  border: 1px solid var(--color-rd-line);
+  border-radius: 12px;
+}
+
+.article-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.article-content th,
+.article-content td {
+  padding: 0.7rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-rd-line);
+}
+
+.article-content th {
+  background: var(--surface-alt);
+  color: var(--color-white);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.article-content tr:last-child td {
+  border-bottom: none;
+}
+
+.article-content tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--color-white) 3%, transparent);
+}
+
+.article-content hr {
+  margin: 2.5rem 0;
+  border: none;
+  border-top: 1px solid var(--color-rd-line);
+}
+
+.article-content img {
+  max-width: 100%;
+  height: auto;
+  margin: 1.75rem 0;
+  border-radius: 12px;
+  border: 1px solid var(--color-rd-line);
 }

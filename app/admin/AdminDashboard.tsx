@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import type {
@@ -27,6 +27,8 @@ import {
   deletePageAction,
 } from "./actions";
 import CreatePostForm from "./CreatePostForm";
+import ImageUploader from "./ImageUploader";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type Tab =
   | "dashboard"
@@ -386,6 +388,7 @@ export default function AdminDashboard({
               placeholder="Rechercher…"
               className="hidden w-56 rounded-xl border border-rd-line bg-rd-deep px-4 py-2 text-sm text-white outline-none focus:border-rd-red/60 sm:block"
             />
+            <ThemeToggle />
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rd-red/20 font-display text-sm font-bold text-rd-redlight">
               {currentUserName ? currentUserName[0].toUpperCase() : "A"}
             </div>
@@ -614,6 +617,7 @@ function PostsPanel({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
   const filtered = search ? posts.filter((post) => matches(post.title, search)) : posts;
@@ -645,7 +649,28 @@ function PostsPanel({
 
   return (
     <div className="space-y-6">
-      <CreatePostForm categories={categories} />
+      <div className="flex items-center justify-between gap-4">
+        <h3 className="font-display text-lg font-semibold">Articles</h3>
+        {!creating ? (
+          <button
+            onClick={() => setCreating(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-rd-red px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nouvel article
+          </button>
+        ) : null}
+      </div>
+
+      {creating ? (
+        <CreatePostForm
+          categories={categories}
+          onDone={() => setCreating(false)}
+          onCancel={() => setCreating(false)}
+        />
+      ) : null}
 
       {error ? (
         <p className="rounded-xl border border-rd-red/40 bg-rd-red/10 px-4 py-3 text-sm text-rd-redlight">{error}</p>
@@ -736,6 +761,21 @@ function EditPostForm({
   onDone: () => void;
 }) {
   const [status, setStatus] = useState("");
+  const [coverUrl, setCoverUrl] = useState(post.coverImageUrl ?? "");
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  function insertIntoContent(snippet: string) {
+    const textarea = contentRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? textarea.value.length;
+    const insertText = `\n\n${snippet}\n\n`;
+    textarea.value = textarea.value.slice(0, start) + insertText + textarea.value.slice(end);
+    textarea.focus();
+    const cursor = start + insertText.length;
+    textarea.setSelectionRange(cursor, cursor);
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -773,16 +813,23 @@ function EditPostForm({
           required
         />
       </label>
-      <label className="block text-sm text-white/80">
-        <span className="mb-1.5 block">Contenu</span>
+      <div className="block text-sm text-white/80">
+        <div className="mb-1.5 flex items-center justify-between gap-3">
+          <span>Contenu</span>
+          <ImageUploader
+            label="Insérer une image"
+            onUploaded={(url) => insertIntoContent(`![Illustration](${url})`)}
+          />
+        </div>
         <textarea
+          ref={contentRef}
           name="content"
-          rows={6}
+          rows={8}
           defaultValue={post.content}
-          className="w-full rounded-xl border border-rd-line bg-rd-graphite px-4 py-2.5 text-white outline-none"
+          className="w-full rounded-xl border border-rd-line bg-rd-graphite px-4 py-2.5 font-mono text-sm text-white outline-none"
           required
         />
-      </label>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm text-white/80">
           <span className="mb-1.5 block">Catégorie</span>
@@ -799,16 +846,28 @@ function EditPostForm({
             ))}
           </select>
         </label>
-        <label className="block text-sm text-white/80">
-          <span className="mb-1.5 block">Image de couverture (URL)</span>
+        <div className="block text-sm text-white/80">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <span>Image de couverture</span>
+            <ImageUploader label="Téléverser" onUploaded={(url) => setCoverUrl(url)} />
+          </div>
           <input
             name="coverImageUrl"
             type="url"
-            defaultValue={post.coverImageUrl ?? ""}
+            value={coverUrl}
+            onChange={(event) => setCoverUrl(event.target.value)}
             placeholder="https://…"
             className="w-full rounded-xl border border-rd-line bg-rd-graphite px-4 py-2.5 text-white outline-none"
           />
-        </label>
+          {coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={coverUrl}
+              alt="Aperçu de la couverture"
+              className="mt-2 h-20 w-full rounded-lg border border-rd-line object-cover"
+            />
+          ) : null}
+        </div>
       </div>
       <label className="flex items-center gap-2 text-sm text-white/80">
         <input name="published" type="checkbox" defaultChecked={post.published} className="h-4 w-4" />
