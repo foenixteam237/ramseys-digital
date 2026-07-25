@@ -24,7 +24,9 @@ function getTransporter(): Transporter | null {
 }
 
 export function getSiteUrl(): string {
-  return process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  if (process.env.NEXTAUTH_URL) return process.env.NEXTAUTH_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000';
 }
 
 interface SendEmailInput {
