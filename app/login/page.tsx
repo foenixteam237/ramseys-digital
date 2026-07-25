@@ -5,8 +5,8 @@ import LoginForm from './LoginForm';
 export default async function LoginPage() {
   const user = await getCurrentUser();
 
-  if (user) {
-    if (user.role === 'ADMIN') {
+   if (user) {
+    if (user.role === 'ADMIN' || user.role === 'EDITOR') {
       redirect('/admin');
     } else {
       redirect('/blog');
