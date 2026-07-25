@@ -84,7 +84,7 @@ export async function signUpAction(formData: FormData) {
     throw new Error(`Erreur lors de la création du compte : ${insertError.message}`);
   }
 
-  const verifyUrl = `${getSiteUrl()}/verify-email?token=${verificationToken}`;
+    const verifyUrl = `${await getSiteUrl()}/verify-email?token=${verificationToken}`;
   const { subject, html } = buildVerificationEmail(verifyUrl);
   await sendEmail({ to: email, subject, html });
 

@@ -106,7 +106,7 @@ async function notifyNewPost(post: {
 
   await supabase.from('notifications').insert(notificationRows);
 
-  const postUrl = `${getSiteUrl()}${link}`;
+    const postUrl = `${await getSiteUrl()}${link}`;
   const { subject, html } = buildNewPostEmail(post.title, post.excerpt, postUrl);
 
   await Promise.all(
