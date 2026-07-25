@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import type { YoutubeVideo } from "@/lib/youtube";
-
+import { Analytics } from "@vercel/analytics/next"
 const services = [
   {
     title: "Installation & mise à jour système",
@@ -555,7 +555,7 @@ export default function Home() {
           </div>
         </section>
       </main>
-
+      <Analytics/>
       <Footer />
     </div>
   );

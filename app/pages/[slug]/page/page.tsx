@@ -4,6 +4,7 @@ import ArticleBody from '@/components/ArticleBody';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
+
 export const dynamic = 'force-dynamic';
 
 export default async function StaticPage({ params }: { params: Promise<{ slug: string }> }) {
