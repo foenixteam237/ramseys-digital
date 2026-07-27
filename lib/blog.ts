@@ -54,6 +54,7 @@ const normalizePost = (post: Record<string, unknown>) => {
     coverImageUrl: (post.cover_image_url as string | null) ?? (post.coverImageUrl as string | null) ?? null,
     categoryId: (post.category_id as string | null) ?? null,
     categoryName: category?.name ?? null,
+    status: (post.status as string | undefined) ?? 'APPROVED',
     views: (post.views as number | undefined) ?? 0,
     likes: (Array.isArray(post.likes) ? post.likes : []) as PostLike[],
     comments: (Array.isArray(post.comments) ? post.comments : []) as PostComment[],
@@ -72,6 +73,7 @@ export async function getPublishedPosts() {
     .from('posts')
     .select(POST_SELECT)
     .eq('published', true)
+    .eq('status', 'APPROVED')
     .order('created_at', { ascending: false });
 
   if (error) {

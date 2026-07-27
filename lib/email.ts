@@ -47,6 +47,7 @@ export async function getSiteUrl(): Promise<string> {
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return configured ?? 'http://localhost:3000';
 }
+
 interface SendEmailInput {
   to: string;
   subject: string;
@@ -119,6 +120,47 @@ export function buildNewPostEmail(postTitle: string, postExcerpt: string, postUr
           <a href="${postUrl}" style="background:#d61f26; color:#ffffff; padding:12px 20px; border-radius:8px; text-decoration:none; font-weight:600; font-size:14px;">
             Lire l'article
           </a>
+        </p>
+      `,
+    ),
+  };
+}
+
+export function buildPostApprovedEmail(postTitle: string, postUrl: string): { subject: string; html: string } {
+  return {
+    subject: `Votre article a été validé : ${postTitle}`,
+    html: emailLayout(
+      'Votre article a été validé ✅',
+      `
+        <p style="color:#cccccc; font-size:14px; line-height:1.6;">
+          Bonne nouvelle ! Votre article « <strong style="color:#ffffff;">${postTitle}</strong> » a été validé par un administrateur et est désormais publié sur le blog.
+        </p>
+        <p style="margin:24px 0;">
+          <a href="${postUrl}" style="background:#d61f26; color:#ffffff; padding:12px 20px; border-radius:8px; text-decoration:none; font-weight:600; font-size:14px;">
+            Voir l'article en ligne
+          </a>
+        </p>
+      `,
+    ),
+  };
+}
+
+export function buildPostRejectedEmail(postTitle: string, note: string): { subject: string; html: string } {
+  return {
+    subject: `Votre article nécessite des modifications : ${postTitle}`,
+    html: emailLayout(
+      'Votre article n’a pas été validé',
+      `
+        <p style="color:#cccccc; font-size:14px; line-height:1.6;">
+          Votre article « <strong style="color:#ffffff;">${postTitle}</strong> » n’a pas encore été validé.
+        </p>
+        ${
+          note
+            ? `<p style="color:#cccccc; font-size:14px; line-height:1.6;"><strong style="color:#ffffff;">Motif :</strong> ${note}</p>`
+            : ''
+        }
+        <p style="color:#777777; font-size:13px; line-height:1.6;">
+          Connectez-vous à votre espace rédacteur pour modifier l’article et le soumettre à nouveau.
         </p>
       `,
     ),

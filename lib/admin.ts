@@ -15,6 +15,8 @@ export interface AdminPost {
   categoryId: string | null;
   categoryName: string | null;
   coverImageUrl: string | null;
+  status: string;
+  reviewNote: string | null;
   views: number;
   likesCount: number;
   commentsCount: number;
@@ -22,6 +24,14 @@ export interface AdminPost {
   likeDates: string[];
   commentDates: string[];
   shareDates: string[];
+}
+
+export interface AdminCategoryRequest {
+  id: string;
+  name: string;
+  status: string;
+  requestedByName: string;
+  createdAt: string;
 }
 
 export interface AdminUser {
@@ -78,7 +88,7 @@ export async function getAllPostsForAdmin(authorId?: string): Promise<AdminPost[
   let query = supabase
     .from('posts')
     .select(
-      'id, title, slug, excerpt, content, published, created_at, updated_at, cover_image_url, category_id, author_id, author_name, views, ' +
+      'id, title, slug, excerpt, content, published, created_at, updated_at, cover_image_url, category_id, author_id, author_name, status, review_note, views, ' +
         'author:users(name), category:categories(name), likes(created_at), comments(created_at), shares(created_at)',
     )
     .order('created_at', { ascending: false });
@@ -116,6 +126,8 @@ export async function getAllPostsForAdmin(authorId?: string): Promise<AdminPost[
       categoryId: (post.category_id as string | null) ?? null,
       categoryName: category?.name ?? null,
       coverImageUrl: (post.cover_image_url as string | null) ?? null,
+      status: (post.status as string | undefined) ?? 'APPROVED',
+      reviewNote: (post.review_note as string | null) ?? null,
       views: (post.views as number | undefined) ?? 0,
       likesCount: likes.length,
       commentsCount: comments.length,
@@ -212,6 +224,39 @@ export async function getAllCategories(createdBy?: string): Promise<AdminCategor
       postCount: Array.isArray(category.posts) ? category.posts.length : 0,
     };
   });
+}
+
+// Demandes de categorie. Pour un ADMIN : toutes les demandes en attente.
+// Pour un EDITOR (requestedBy fourni) : ses propres demandes.
+export async function getCategoryRequests(requestedBy?: string): Promise<AdminCategoryRequest[]> {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  let query = supabase
+    .from('category_requests')
+    .select('id, name, status, requested_by_name, created_at')
+    .order('created_at', { ascending: false });
+
+  if (requestedBy) {
+    query = query.eq('requested_by', requestedBy);
+  } else {
+    query = query.eq('status', 'PENDING');
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('getCategoryRequests error:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    status: row.status,
+    requestedByName: row.requested_by_name ?? 'Rédacteur',
+    createdAt: row.created_at,
+  }));
 }
 
 export async function getAllMedia(uploadedBy?: string): Promise<AdminMediaItem[]> {

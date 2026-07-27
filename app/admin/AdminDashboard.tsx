@@ -8,6 +8,7 @@ import type {
   AdminUser,
   AdminComment,
   AdminCategory,
+  AdminCategoryRequest,
   AdminMediaItem,
   AdminPageItem,
 } from "@/lib/admin";
@@ -15,10 +16,15 @@ import {
   updatePostAction,
   togglePostPublishedAction,
   deletePostAction,
+  approvePostAction,
+  rejectPostAction,
   deleteCommentAction,
   updateUserRoleAction,
   createCategoryAction,
   deleteCategoryAction,
+  requestCategoryAction,
+  approveCategoryRequestAction,
+  rejectCategoryRequestAction,
   uploadMediaAction,
   deleteMediaAction,
   createPageAction,
@@ -48,6 +54,7 @@ interface AdminDashboardProps {
   initialUsers: AdminUser[];
   initialComments: AdminComment[];
   initialCategories: AdminCategory[];
+  initialCategoryRequests: AdminCategoryRequest[];
   initialMedia: AdminMediaItem[];
   initialPages: AdminPageItem[];
   currentUserId: string;
@@ -354,6 +361,7 @@ export default function AdminDashboard({
   initialUsers,
   initialComments,
   initialCategories,
+  initialCategoryRequests,
   initialMedia,
   initialPages,
   currentUserId,
@@ -422,6 +430,16 @@ export default function AdminDashboard({
               placeholder="Rechercher…"
               className="hidden w-56 rounded-xl border border-rd-line bg-rd-deep px-4 py-2 text-sm text-white outline-none focus:border-rd-red/60 sm:block"
             />
+            <a
+              href="/blog"
+              className="flex items-center gap-2 rounded-xl border border-rd-line px-3 py-2 text-sm font-semibold text-white/70 transition hover:border-rd-red/50 hover:text-white"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              <span className="hidden sm:inline">Voir le blog</span>
+            </a>
             <ThemeToggle />
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rd-red/20 font-display text-sm font-bold text-rd-redlight">
               {currentUserName ? currentUserName[0].toUpperCase() : "A"}
@@ -445,8 +463,12 @@ export default function AdminDashboard({
               onNavigate={setTab}
             />
           ) : null}
-          {tab === "articles" ? <PostsPanel posts={initialPosts} categories={initialCategories} search={search} /> : null}
-          {tab === "categories" ? <CategoriesPanel categories={initialCategories} /> : null}
+          {tab === "articles" ? (
+            <PostsPanel posts={initialPosts} categories={initialCategories} search={search} isAdmin={isAdmin} />
+          ) : null}
+          {tab === "categories" ? (
+            <CategoriesPanel categories={initialCategories} requests={initialCategoryRequests} isAdmin={isAdmin} />
+          ) : null}
           {tab === "media" ? <MediaPanel media={initialMedia} /> : null}
           {tab === "docs" ? <DocsPanel /> : null}
           {tab === "pages" ? <PagesPanel pages={initialPages} /> : null}
@@ -658,14 +680,42 @@ function DashboardPanel({
 
 // ---------- Articles ----------
 
+function StatusBadge({ status, published }: { status: string; published: boolean }) {
+  if (status === "PENDING") {
+    return (
+      <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-amber-300">
+        En attente
+      </span>
+    );
+  }
+  if (status === "REJECTED") {
+    return (
+      <span className="rounded-full bg-rd-red/20 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-rd-redlight">
+        Rejeté
+      </span>
+    );
+  }
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${
+        published ? "bg-emerald-500/20 text-emerald-300" : "bg-white/10 text-white/50"
+      }`}
+    >
+      {published ? "Publié" : "Brouillon"}
+    </span>
+  );
+}
+
 function PostsPanel({
   posts,
   categories,
   search,
+  isAdmin,
 }: {
   posts: AdminPost[];
   categories: AdminCategory[];
   search: string;
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -674,30 +724,34 @@ function PostsPanel({
   const [error, setError] = useState("");
 
   const filtered = search ? posts.filter((post) => matches(post.title, search)) : posts;
+  const pendingCount = posts.filter((post) => post.status === "PENDING").length;
 
-  const handleTogglePublished = (postId: string, published: boolean) => {
+  const run = (fn: () => Promise<unknown>) => {
     setError("");
     startTransition(async () => {
       try {
-        await togglePostPublishedAction(postId, published);
+        await fn();
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erreur lors de la mise à jour.");
+        setError(err instanceof Error ? err.message : "Une erreur est survenue.");
       }
     });
   };
 
+  const handleTogglePublished = (postId: string, published: boolean) =>
+    run(() => togglePostPublishedAction(postId, published));
+
+  const handleApprove = (postId: string) => run(() => approvePostAction(postId));
+
+  const handleReject = (postId: string) => {
+    const note = window.prompt("Motif du rejet (visible par le rédacteur, facultatif) :", "");
+    if (note === null) return;
+    run(() => rejectPostAction(postId, note));
+  };
+
   const handleDelete = (postId: string) => {
     if (!window.confirm("Supprimer définitivement cet article ?")) return;
-    setError("");
-    startTransition(async () => {
-      try {
-        await deletePostAction(postId);
-        router.refresh();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Erreur lors de la suppression.");
-      }
-    });
+    run(() => deletePostAction(postId));
   };
 
   return (
@@ -717,9 +771,21 @@ function PostsPanel({
         ) : null}
       </div>
 
+      {!isAdmin ? (
+        <p className="rounded-xl border border-rd-line bg-rd-graphite/60 px-4 py-3 text-sm text-white/60">
+          Vos articles sont soumis à la validation d&apos;un administrateur avant publication. Vous serez notifié par email
+          de la décision.
+        </p>
+      ) : pendingCount > 0 ? (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          {pendingCount} article{pendingCount > 1 ? "s" : ""} en attente de validation.
+        </p>
+      ) : null}
+
       {creating ? (
         <CreatePostForm
           categories={categories}
+          isEditor={!isAdmin}
           onDone={() => setCreating(false)}
           onCancel={() => setCreating(false)}
         />
@@ -738,15 +804,7 @@ function PostsPanel({
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${
-                        post.published
-                          ? "bg-emerald-500/20 text-emerald-300"
-                          : "bg-white/10 text-white/50"
-                      }`}
-                    >
-                      {post.published ? "Publié" : "Brouillon"}
-                    </span>
+                    <StatusBadge status={post.status} published={post.published} />
                     {post.categoryName ? (
                       <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-white/50">
                         {post.categoryName}
@@ -760,6 +818,11 @@ function PostsPanel({
                   <p className="mt-1 text-sm text-white/60">
                     {post.views} vues · {post.likesCount} likes · {post.commentsCount} commentaires · {post.sharesCount} partages
                   </p>
+                  {post.status === "REJECTED" && post.reviewNote ? (
+                    <p className="mt-2 rounded-lg border border-rd-red/30 bg-rd-red/10 px-3 py-2 text-xs text-rd-redlight">
+                      Motif du rejet : {post.reviewNote}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -769,13 +832,36 @@ function PostsPanel({
                   >
                     {editingId === post.id ? "Fermer" : "Modifier"}
                   </button>
-                  <button
-                    onClick={() => handleTogglePublished(post.id, !post.published)}
-                    disabled={isPending}
-                    className="rounded-lg border border-rd-line px-3 py-1.5 text-xs font-semibold text-white/80 hover:border-white/40 disabled:opacity-50"
-                  >
-                    {post.published ? "Dépublier" : "Publier"}
-                  </button>
+
+                  {isAdmin && post.status === "PENDING" ? (
+                    <>
+                      <button
+                        onClick={() => handleApprove(post.id)}
+                        disabled={isPending}
+                        className="rounded-lg border border-emerald-500/40 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
+                      >
+                        Valider
+                      </button>
+                      <button
+                        onClick={() => handleReject(post.id)}
+                        disabled={isPending}
+                        className="rounded-lg border border-rd-red/40 px-3 py-1.5 text-xs font-semibold text-rd-redlight hover:bg-rd-red/10 disabled:opacity-50"
+                      >
+                        Rejeter
+                      </button>
+                    </>
+                  ) : null}
+
+                  {isAdmin && post.status === "APPROVED" ? (
+                    <button
+                      onClick={() => handleTogglePublished(post.id, !post.published)}
+                      disabled={isPending}
+                      className="rounded-lg border border-rd-line px-3 py-1.5 text-xs font-semibold text-white/80 hover:border-white/40 disabled:opacity-50"
+                    >
+                      {post.published ? "Dépublier" : "Publier"}
+                    </button>
+                  ) : null}
+
                   <button
                     onClick={() => handleDelete(post.id)}
                     disabled={isPending}
@@ -1105,84 +1191,167 @@ function UsersPanel({
 
 // ---------- Categories ----------
 
-function CategoriesPanel({ categories }: { categories: AdminCategory[] }) {
+function CategoriesPanel({
+  categories,
+  requests,
+  isAdmin,
+}: {
+  categories: AdminCategory[];
+  requests: AdminCategoryRequest[];
+  isAdmin: boolean;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError("");
-
-    try {
-      const formData = new FormData();
-      formData.set("name", name);
-      await createCategoryAction(formData);
-      setName("");
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de la création.");
-    }
-  };
-
-  const handleDelete = (categoryId: string) => {
-    if (!window.confirm("Supprimer cette catégorie ?")) return;
+  const run = (fn: () => Promise<unknown>, after?: () => void) => {
     setError("");
     startTransition(async () => {
       try {
-        await deleteCategoryAction(categoryId);
+        await fn();
+        after?.();
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erreur lors de la suppression.");
+        setError(err instanceof Error ? err.message : "Une erreur est survenue.");
       }
     });
   };
 
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    try {
+      const formData = new FormData();
+      formData.set("name", name);
+      if (isAdmin) {
+        await createCategoryAction(formData);
+      } else {
+        await requestCategoryAction(formData);
+        setNotice("Demande envoyée à l'administrateur.");
+      }
+      setName("");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur.");
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <form onSubmit={handleCreate} className="flex flex-wrap gap-3 rounded-2xl border border-rd-line bg-rd-deep p-5">
+      <form onSubmit={handleSubmit} className="flex flex-wrap gap-3 rounded-2xl border border-rd-line bg-rd-deep p-5">
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="Nom de la catégorie"
+          placeholder={isAdmin ? "Nom de la catégorie" : "Catégorie souhaitée…"}
           className="flex-1 rounded-xl border border-rd-line bg-rd-graphite px-4 py-2.5 text-sm text-white outline-none focus:border-rd-red/60"
           required
         />
         <button type="submit" className="rounded-xl bg-rd-red px-4 py-2.5 text-sm font-semibold text-white">
-          Ajouter
+          {isAdmin ? "Ajouter" : "Demander"}
         </button>
       </form>
 
+      {notice ? (
+        <p className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          {notice}
+        </p>
+      ) : null}
       {error ? (
         <p className="rounded-xl border border-rd-red/40 bg-rd-red/10 px-4 py-3 text-sm text-rd-redlight">{error}</p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {categories.length === 0 ? (
-          <p className="py-6 text-sm text-white/40 italic">Aucune catégorie pour le moment.</p>
-        ) : (
-          categories.map((category) => (
-            <div
-              key={category.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-rd-line bg-rd-deep p-4"
-            >
-              <div>
-                <p className="text-sm font-semibold text-white">{category.name}</p>
-                <p className="text-xs text-white/40">
-                  {category.postCount} article{category.postCount > 1 ? "s" : ""}
-                </p>
-              </div>
-              <button
-                onClick={() => handleDelete(category.id)}
-                disabled={isPending}
-                className="rounded-lg border border-rd-red/40 px-2.5 py-1 text-xs font-semibold text-rd-redlight hover:bg-rd-red/10 disabled:opacity-50"
+      {/* Demandes de categorie */}
+      {requests.length > 0 ? (
+        <div>
+          <h4 className="mb-2 text-sm font-semibold text-white/80">
+            {isAdmin ? "Demandes de catégorie en attente" : "Mes demandes"}
+          </h4>
+          <div className="space-y-2">
+            {requests.map((req) => (
+              <div
+                key={req.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rd-line bg-rd-deep p-4"
               >
-                Supprimer
-              </button>
-            </div>
-          ))
-        )}
+                <div>
+                  <p className="text-sm font-semibold text-white">{req.name}</p>
+                  <p className="text-xs text-white/40">
+                    {isAdmin ? `Demandé par ${req.requestedByName} · ` : ""}
+                    {new Date(req.createdAt).toLocaleDateString("fr-FR")}
+                  </p>
+                </div>
+                {isAdmin ? (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => run(() => approveCategoryRequestAction(req.id))}
+                      disabled={isPending}
+                      className="rounded-lg border border-emerald-500/40 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
+                    >
+                      Approuver
+                    </button>
+                    <button
+                      onClick={() => run(() => rejectCategoryRequestAction(req.id))}
+                      disabled={isPending}
+                      className="rounded-lg border border-rd-red/40 px-3 py-1.5 text-xs font-semibold text-rd-redlight hover:bg-rd-red/10 disabled:opacity-50"
+                    >
+                      Rejeter
+                    </button>
+                  </div>
+                ) : (
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${
+                      req.status === "APPROVED"
+                        ? "bg-emerald-500/20 text-emerald-300"
+                        : req.status === "REJECTED"
+                          ? "bg-rd-red/20 text-rd-redlight"
+                          : "bg-amber-500/20 text-amber-300"
+                    }`}
+                  >
+                    {req.status === "APPROVED" ? "Approuvée" : req.status === "REJECTED" ? "Refusée" : "En attente"}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Liste des categories existantes */}
+      <div>
+        <h4 className="mb-2 text-sm font-semibold text-white/80">Catégories</h4>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {categories.length === 0 ? (
+            <p className="py-6 text-sm text-white/40 italic">Aucune catégorie pour le moment.</p>
+          ) : (
+            categories.map((category) => (
+              <div
+                key={category.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-rd-line bg-rd-deep p-4"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-white">{category.name}</p>
+                  <p className="text-xs text-white/40">
+                    {category.postCount} article{category.postCount > 1 ? "s" : ""}
+                  </p>
+                </div>
+                {isAdmin ? (
+                  <button
+                    onClick={() => {
+                      if (!window.confirm("Supprimer cette catégorie ?")) return;
+                      run(() => deleteCategoryAction(category.id));
+                    }}
+                    disabled={isPending}
+                    className="rounded-lg border border-rd-red/40 px-2.5 py-1 text-xs font-semibold text-rd-redlight hover:bg-rd-red/10 disabled:opacity-50"
+                  >
+                    Supprimer
+                  </button>
+                ) : null}
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

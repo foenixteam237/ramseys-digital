@@ -8,11 +8,12 @@ import type { AdminCategory } from '@/lib/admin';
 
 interface CreatePostFormProps {
   categories: AdminCategory[];
+  isEditor?: boolean;
   onDone?: () => void;
   onCancel?: () => void;
 }
 
-export default function CreatePostForm({ categories, onDone, onCancel }: CreatePostFormProps) {
+export default function CreatePostForm({ categories, isEditor = false, onDone, onCancel }: CreatePostFormProps) {
   const router = useRouter();
   const [status, setStatus] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +35,7 @@ export default function CreatePostForm({ categories, onDone, onCancel }: CreateP
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatus('Publication en cours…');
+    setStatus(isEditor ? 'Envoi pour validation…' : 'Publication en cours…');
     setSubmitting(true);
 
     const form = event.currentTarget;
@@ -42,7 +43,7 @@ export default function CreatePostForm({ categories, onDone, onCancel }: CreateP
     try {
       const formData = new FormData(form);
       await createPostAction(formData);
-      setStatus('Article publié avec succès.');
+      setStatus(isEditor ? 'Article soumis pour validation.' : 'Article publié avec succès.');
       form.reset();
       setCoverUrl('');
       router.refresh();
@@ -159,10 +160,16 @@ export default function CreatePostForm({ categories, onDone, onCancel }: CreateP
         </div>
       </div>
 
-      <label className="flex items-center gap-3 text-sm text-white/80">
-        <input name="published" type="checkbox" className="h-4 w-4 accent-rd-red" defaultChecked />
-        <span>Publier immédiatement (sinon enregistré en brouillon)</span>
-      </label>
+      {isEditor ? (
+        <p className="rounded-lg border border-rd-line bg-rd-graphite px-4 py-2.5 text-xs text-white/60">
+          Votre article sera envoyé à un administrateur pour validation avant d&apos;être publié.
+        </p>
+      ) : (
+        <label className="flex items-center gap-3 text-sm text-white/80">
+          <input name="published" type="checkbox" className="h-4 w-4 accent-rd-red" defaultChecked />
+          <span>Publier immédiatement (sinon enregistré en brouillon)</span>
+        </label>
+      )}
 
       <div className="flex items-center gap-3">
         <button
@@ -170,7 +177,13 @@ export default function CreatePostForm({ categories, onDone, onCancel }: CreateP
           disabled={submitting}
           className="inline-flex rounded-xl bg-rd-red px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
         >
-          {submitting ? 'Enregistrement…' : 'Enregistrer l’article'}
+          {submitting
+            ? isEditor
+              ? 'Envoi…'
+              : 'Enregistrement…'
+            : isEditor
+              ? 'Soumettre pour validation'
+              : 'Enregistrer l’article'}
         </button>
         {onCancel ? (
           <button

@@ -6,7 +6,13 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/session';
 import { createClient } from '@/utils/supabase/server';
-import { sendEmail, buildNewPostEmail, getSiteUrl } from '@/lib/email';
+import {
+  sendEmail,
+  buildNewPostEmail,
+  buildPostApprovedEmail,
+  buildPostRejectedEmail,
+  getSiteUrl,
+} from '@/lib/email';
 
 const createPostSchema = z.object({
   title: z.string().min(3),
@@ -106,7 +112,7 @@ async function notifyNewPost(post: {
 
   await supabase.from('notifications').insert(notificationRows);
 
-    const postUrl = `${await getSiteUrl()}${link}`;
+  const postUrl = `${await getSiteUrl()}${link}`;
   const { subject, html } = buildNewPostEmail(post.title, post.excerpt, postUrl);
 
   await Promise.all(
@@ -138,7 +144,10 @@ export async function createPostAction(formData: FormData) {
   const authorId = user.id;
   const slug = `${slugify(title)}-${Date.now()}`;
 
-  const isPublished = published ?? true;
+  const isAdmin = user.role === 'ADMIN';
+  // Un ADMIN publie directement ; un EDITOR soumet a validation.
+  const status = isAdmin ? 'APPROVED' : 'PENDING';
+  const isPublished = isAdmin ? published ?? true : false;
 
   const { error } = await supabase.from('posts').insert({
     title,
@@ -146,6 +155,7 @@ export async function createPostAction(formData: FormData) {
     excerpt,
     content,
     published: isPublished,
+    status,
     author_id: authorId,
     author_name: user.name ?? null,
     category_id: categoryId || null,
@@ -153,10 +163,10 @@ export async function createPostAction(formData: FormData) {
   });
 
   if (error) {
-    throw new Error(`Impossible de publier l’article : ${error.message}`);
+    throw new Error(`Impossible d’enregistrer l’article : ${error.message}`);
   }
 
-  if (isPublished) {
+  if (isAdmin && isPublished) {
     await notifyNewPost({ title, excerpt, slug, authorId });
   }
 
@@ -187,15 +197,23 @@ export async function updatePostAction(formData: FormData) {
 
   await assertCanManagePost(supabase, postId, user);
 
+  const isAdmin = user.role === 'ADMIN';
+
+  // Un EDITOR qui modifie son article le repasse en validation (invisible
+  // jusqu'a nouvelle approbation). Un ADMIN garde le controle direct.
+  const moderation = isAdmin
+    ? { published: published ?? false }
+    : { published: false, status: 'PENDING', review_note: null };
+
   const { error } = await supabase
     .from('posts')
     .update({
       title,
       excerpt,
       content,
-      published: published ?? false,
       category_id: categoryId || null,
       cover_image_url: coverImageUrl || null,
+      ...moderation,
     })
     .eq('id', postId);
 
@@ -209,18 +227,123 @@ export async function updatePostAction(formData: FormData) {
 }
 
 export async function togglePostPublishedAction(postId: string, published: boolean) {
-  const user = await requireEditor();
+  await requireAdmin();
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  await assertCanManagePost(supabase, postId, user);
-
-  const { error } = await supabase.from('posts').update({ published }).eq('id', postId);
+  const { error } = await supabase
+    .from('posts')
+    .update({ published, status: published ? 'APPROVED' : 'PENDING' })
+    .eq('id', postId);
 
   if (error) {
     throw new Error(`Impossible de mettre à jour l’article : ${error.message}`);
   }
+
+  revalidatePath('/admin');
+  revalidatePath('/blog');
+}
+
+// Notifie l'auteur (in-app + email) d'une decision de moderation.
+async function notifyAuthorDecision(
+  supabase: ReturnType<typeof createClient>,
+  postId: string,
+  decision: 'APPROVED' | 'REJECTED',
+  note: string,
+) {
+  const { data: post } = await supabase
+    .from('posts')
+    .select('title, slug, author_id')
+    .eq('id', postId)
+    .single();
+
+  if (!post || !post.author_id) return;
+
+  const { data: author } = await supabase
+    .from('users')
+    .select('email, email_verified')
+    .eq('id', post.author_id)
+    .single();
+
+  const link = `/blog/${post.slug}`;
+
+  await supabase.from('notifications').insert({
+    user_id: post.author_id,
+    type: decision === 'APPROVED' ? 'POST_APPROVED' : 'POST_REJECTED',
+    title: decision === 'APPROVED' ? 'Article validé' : 'Article à revoir',
+    message:
+      decision === 'APPROVED'
+        ? `Votre article "${post.title}" a été validé et publié.`
+        : `Votre article "${post.title}" n'a pas été validé.${note ? ' Motif : ' + note : ''}`,
+    link: decision === 'APPROVED' ? link : null,
+  });
+
+  if (author?.email && author.email_verified) {
+    const email =
+      decision === 'APPROVED'
+        ? buildPostApprovedEmail(post.title, `${await getSiteUrl()}${link}`)
+        : buildPostRejectedEmail(post.title, note);
+    await sendEmail({ to: author.email as string, subject: email.subject, html: email.html });
+  }
+}
+
+export async function approvePostAction(postId: string) {
+  await requireAdmin();
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: post, error: fetchError } = await supabase
+    .from('posts')
+    .select('title, excerpt, slug, author_id')
+    .eq('id', postId)
+    .single();
+
+  if (fetchError || !post) {
+    throw new Error("Article introuvable.");
+  }
+
+  const { error } = await supabase
+    .from('posts')
+    .update({ status: 'APPROVED', published: true, review_note: null })
+    .eq('id', postId);
+
+  if (error) {
+    throw new Error(`Impossible de valider l’article : ${error.message}`);
+  }
+
+  await notifyAuthorDecision(supabase, postId, 'APPROVED', '');
+  // Notifie aussi les abonnes du nouvel article
+  if (post.author_id) {
+    await notifyNewPost({
+      title: post.title,
+      excerpt: post.excerpt,
+      slug: post.slug,
+      authorId: post.author_id,
+    });
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/blog');
+}
+
+export async function rejectPostAction(postId: string, note: string) {
+  await requireAdmin();
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase
+    .from('posts')
+    .update({ status: 'REJECTED', published: false, review_note: note || null })
+    .eq('id', postId);
+
+  if (error) {
+    throw new Error(`Impossible de rejeter l’article : ${error.message}`);
+  }
+
+  await notifyAuthorDecision(supabase, postId, 'REJECTED', note || '');
 
   revalidatePath('/admin');
   revalidatePath('/blog');
@@ -308,7 +431,7 @@ const createCategorySchema = z.object({
 });
 
 export async function createCategoryAction(formData: FormData) {
-  const user = await requireEditor();
+  const user = await requireAdmin();
 
   const payload = createCategorySchema.safeParse({ name: formData.get('name') });
 
@@ -331,17 +454,10 @@ export async function createCategoryAction(formData: FormData) {
 }
 
 export async function deleteCategoryAction(categoryId: string) {
-  const user = await requireEditor();
+  await requireAdmin();
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
-
-  if (user.role !== 'ADMIN') {
-    const { data } = await supabase.from('categories').select('created_by').eq('id', categoryId).single();
-    if (!data || data.created_by !== user.id) {
-      throw new Error('Vous ne pouvez supprimer que vos propres catégories.');
-    }
-  }
 
   const { error } = await supabase.from('categories').delete().eq('id', categoryId);
 
@@ -351,6 +467,81 @@ export async function deleteCategoryAction(categoryId: string) {
 
   revalidatePath('/admin');
   revalidatePath('/blog');
+}
+
+// Un EDITOR demande la creation d'une categorie ; l'admin tranchera.
+export async function requestCategoryAction(formData: FormData) {
+  const user = await requireEditor();
+
+  const payload = createCategorySchema.safeParse({ name: formData.get('name') });
+
+  if (!payload.success) {
+    throw new Error('Le nom de la catégorie est invalide.');
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase.from('category_requests').insert({
+    name: payload.data.name,
+    requested_by: user.id,
+    requested_by_name: user.name ?? null,
+  });
+
+  if (error) {
+    throw new Error(`Impossible d’envoyer la demande : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+}
+
+export async function approveCategoryRequestAction(requestId: string) {
+  const user = await requireAdmin();
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: request, error: fetchError } = await supabase
+    .from('category_requests')
+    .select('name, status')
+    .eq('id', requestId)
+    .single();
+
+  if (fetchError || !request) {
+    throw new Error('Demande introuvable.');
+  }
+
+  const slug = `${slugify(request.name)}-${Date.now()}`;
+  const { error: insertError } = await supabase
+    .from('categories')
+    .insert({ name: request.name, slug, created_by: user.id });
+
+  if (insertError) {
+    throw new Error(`Impossible de créer la catégorie : ${insertError.message}`);
+  }
+
+  await supabase.from('category_requests').update({ status: 'APPROVED' }).eq('id', requestId);
+
+  revalidatePath('/admin');
+  revalidatePath('/blog');
+}
+
+export async function rejectCategoryRequestAction(requestId: string) {
+  await requireAdmin();
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase
+    .from('category_requests')
+    .update({ status: 'REJECTED' })
+    .eq('id', requestId);
+
+  if (error) {
+    throw new Error(`Impossible de rejeter la demande : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
 }
 
 export async function uploadMediaAction(formData: FormData) {

@@ -5,6 +5,7 @@ import {
   getAllUsers,
   getAllCommentsForAdmin,
   getAllCategories,
+  getCategoryRequests,
   getAllMedia,
   getAllPages,
 } from '@/lib/admin';
@@ -20,14 +21,17 @@ export default async function AdminPage() {
   }
 
   const isAdmin = user.role === 'ADMIN';
-  // Un EDITOR ne voit que ses propres contenus.
+  // Un EDITOR ne voit que ses propres articles et médias.
   const authorFilter = isAdmin ? undefined : user.id;
 
-  const [posts, users, comments, categories, media, pages] = await Promise.all([
+  const [posts, users, comments, categories, categoryRequests, media, pages] = await Promise.all([
     getAllPostsForAdmin(authorFilter),
     isAdmin ? getAllUsers() : Promise.resolve([]),
     isAdmin ? getAllCommentsForAdmin() : Promise.resolve([]),
-    getAllCategories(authorFilter),
+    // Toutes les catégories sont visibles (pour pouvoir les assigner à un article).
+    getAllCategories(),
+    // ADMIN : demandes en attente ; EDITOR : ses propres demandes.
+    getCategoryRequests(authorFilter),
     getAllMedia(authorFilter),
     isAdmin ? getAllPages() : Promise.resolve([]),
   ]);
@@ -38,6 +42,7 @@ export default async function AdminPage() {
       initialUsers={users}
       initialComments={comments}
       initialCategories={categories}
+      initialCategoryRequests={categoryRequests}
       initialMedia={media}
       initialPages={pages}
       currentUserId={user.id}
