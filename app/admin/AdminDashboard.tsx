@@ -11,6 +11,7 @@ import type {
   AdminCategoryRequest,
   AdminMediaItem,
   AdminPageItem,
+  AdminVideo,
 } from "@/lib/admin";
 import {
   updatePostAction,
@@ -32,6 +33,8 @@ import {
   togglePagePublishedAction,
   deletePageAction,
   setUserActiveAction,
+  addFeaturedVideoAction,
+  deleteFeaturedVideoAction,
 } from "./actions";
 import CreatePostForm from "./CreatePostForm";
 import ImageUploader from "./ImageUploader";
@@ -42,6 +45,7 @@ type Tab =
   | "articles"
   | "categories"
   | "media"
+  | "videos"
   | "pages"
   | "commentaires"
   | "utilisateurs"
@@ -57,6 +61,7 @@ interface AdminDashboardProps {
   initialCategoryRequests: AdminCategoryRequest[];
   initialMedia: AdminMediaItem[];
   initialPages: AdminPageItem[];
+  initialVideos: AdminVideo[];
   currentUserId: string;
   currentUserName: string;
   currentUserRole: string;
@@ -96,6 +101,15 @@ function IconImage() {
       <rect x="3.5" y="4.5" width="17" height="15" rx="1.5" />
       <circle cx="8.5" cy="9.5" r="1.5" />
       <path d="m4 17 5-5 4 4 3-3 4 4" />
+    </svg>
+  );
+}
+
+function IconVideo() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3" y="6" width="13" height="12" rx="2" />
+      <path d="m16 10 5-3v10l-5-3Z" />
     </svg>
   );
 }
@@ -345,6 +359,7 @@ const NAV_ITEMS: NavItem[] = [
   { tab: "articles", label: "Articles", icon: <IconPosts /> },
   { tab: "categories", label: "Catégories", icon: <IconFolder /> },
   { tab: "media", label: "Média", icon: <IconImage /> },
+  { tab: "videos", label: "Vidéos", icon: <IconVideo />, adminOnly: true },
   { tab: "docs", label: "Aide à la rédaction", icon: <IconBook /> },
   { tab: "pages", label: "Pages", icon: <IconFile />, adminOnly: true },
   { tab: "commentaires", label: "Commentaires", icon: <IconMail />, adminOnly: true },
@@ -364,6 +379,7 @@ export default function AdminDashboard({
   initialCategoryRequests,
   initialMedia,
   initialPages,
+  initialVideos,
   currentUserId,
   currentUserName,
   currentUserRole,
@@ -470,6 +486,7 @@ export default function AdminDashboard({
             <CategoriesPanel categories={initialCategories} requests={initialCategoryRequests} isAdmin={isAdmin} />
           ) : null}
           {tab === "media" ? <MediaPanel media={initialMedia} /> : null}
+          {tab === "videos" ? <VideosPanel videos={initialVideos} /> : null}
           {tab === "docs" ? <DocsPanel /> : null}
           {tab === "pages" ? <PagesPanel pages={initialPages} /> : null}
           {tab === "commentaires" ? <CommentsPanel comments={initialComments} search={search} /> : null}
@@ -1458,6 +1475,127 @@ function MediaPanel({ media }: { media: AdminMediaItem[] }) {
                     className="rounded-lg border border-rd-red/40 px-2 py-1 text-[11px] font-semibold text-rd-redlight hover:bg-rd-red/10 disabled:opacity-50"
                   >
                     Suppr.
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Vidéos ----------
+
+function VideosPanel({ videos }: { videos: AdminVideo[] }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+
+  const handleAdd = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setStatus("Ajout en cours…");
+    setError("");
+
+    const form = event.currentTarget;
+
+    try {
+      const formData = new FormData(form);
+      await addFeaturedVideoAction(formData);
+      setStatus("Vidéo ajoutée.");
+      form.reset();
+      router.refresh();
+    } catch (err) {
+      setStatus("");
+      setError(err instanceof Error ? err.message : "Erreur lors de l’ajout.");
+    }
+  };
+
+  const handleDelete = (video: AdminVideo) => {
+    if (!window.confirm("Retirer cette vidéo de la page d’accueil ?")) return;
+    setError("");
+    startTransition(async () => {
+      try {
+        await deleteFeaturedVideoAction(video.id);
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Erreur lors de la suppression.");
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-rd-line bg-rd-deep p-5">
+        <h3 className="font-display text-lg font-semibold">Vidéos de la page d’accueil</h3>
+        <p className="mt-1 text-sm text-white/50">
+          Collez le lien d’une vidéo YouTube. Elle s’affiche immédiatement dans la section « Nos vidéos »
+          du site — sans dépendre d’un accès serveur à YouTube.
+        </p>
+
+        <form onSubmit={handleAdd} className="mt-4 space-y-3">
+          <input
+            name="url"
+            type="text"
+            required
+            placeholder="https://www.youtube.com/watch?v=… ou https://youtu.be/…"
+            className="w-full rounded-xl border border-rd-line bg-rd-graphite px-4 py-3 text-sm text-white outline-none focus:border-rd-red/60"
+          />
+          <input
+            name="title"
+            type="text"
+            placeholder="Titre (optionnel)"
+            className="w-full rounded-xl border border-rd-line bg-rd-graphite px-4 py-3 text-sm text-white outline-none focus:border-rd-red/60"
+          />
+          <button
+            type="submit"
+            className="inline-flex rounded-xl bg-rd-red px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+          >
+            Ajouter la vidéo
+          </button>
+          {status ? <span className="ml-3 text-xs text-white/60">{status}</span> : null}
+        </form>
+      </div>
+
+      {error ? (
+        <p className="rounded-xl border border-rd-red/40 bg-rd-red/10 px-4 py-3 text-sm text-rd-redlight">{error}</p>
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {videos.length === 0 ? (
+          <p className="py-6 text-sm text-white/40 italic">Aucune vidéo pour le moment.</p>
+        ) : (
+          videos.map((video) => (
+            <div key={video.id} className="overflow-hidden rounded-xl border border-rd-line bg-rd-deep">
+              <div className="relative aspect-video w-full bg-black">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={video.thumbnailUrl}
+                  alt={video.title ?? "Vidéo"}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="p-3">
+                <p className="truncate text-xs font-semibold text-white/80">
+                  {video.title || video.youtubeId}
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <a
+                    href={`https://www.youtube.com/watch?v=${video.youtubeId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 rounded-lg border border-rd-line px-2 py-1 text-center text-[11px] font-semibold text-white/70 hover:border-white/40"
+                  >
+                    Voir
+                  </a>
+                  <button
+                    onClick={() => handleDelete(video)}
+                    disabled={isPending}
+                    className="rounded-lg border border-rd-red/40 px-2 py-1 text-[11px] font-semibold text-rd-redlight hover:bg-rd-red/10 disabled:opacity-50"
+                  >
+                    Retirer
                   </button>
                 </div>
               </div>

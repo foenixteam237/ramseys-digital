@@ -141,18 +141,54 @@ export default function Header() {
 
         {/* Main Nav (Desktop) */}
         <nav className="hidden items-center gap-9 text-sm font-medium text-white/80 md:flex">
-          <Link href={getNavLink("#services")} className="nav-link hover:text-white">
-            Services
-          </Link>
-          <Link href={getNavLink("#pourquoi")} className="nav-link hover:text-white">
-            Pourquoi nous
-          </Link>
-          <Link href={getNavLink("#stats")} className="nav-link hover:text-white">
-            Résultats
-          </Link>
-          <Link href={getNavLink("#temoignages")} className="nav-link hover:text-white">
-            Témoignages
-          </Link>
+          {/* Accueil : regroupe les sections de la page d'accueil */}
+          <div className="relative group">
+            <Link
+              href="/"
+              className="nav-link inline-flex items-center gap-1 hover:text-white"
+            >
+              Accueil
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                className="text-white/50 transition-transform group-hover:rotate-180"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </Link>
+            <div className="invisible absolute left-1/2 top-full -translate-x-1/2 pt-4 opacity-0 transition-all group-hover:visible group-hover:opacity-100">
+              <div className="w-56 rounded-xl border border-rd-line bg-rd-graphite p-2 shadow-2xl shadow-black/60">
+                <Link
+                  href={getNavLink("#services")}
+                  className="block rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/[0.06] hover:text-white"
+                >
+                  Services
+                </Link>
+                <Link
+                  href={getNavLink("#pourquoi")}
+                  className="block rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/[0.06] hover:text-white"
+                >
+                  Pourquoi nous
+                </Link>
+                <Link
+                  href={getNavLink("#stats")}
+                  className="block rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/[0.06] hover:text-white"
+                >
+                  Résultats
+                </Link>
+                <Link
+                  href={getNavLink("#temoignages")}
+                  className="block rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/[0.06] hover:text-white"
+                >
+                  Témoignages
+                </Link>
+              </div>
+            </div>
+          </div>
           <Link href={getNavLink("#videos")} className="nav-link hover:text-white">
             Vidéos
           </Link>
@@ -364,6 +400,13 @@ export default function Header() {
                         {session.user.email}
                       </p>
                     </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="mt-1 flex w-full items-center rounded-lg px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.05] hover:text-white"
+                    >
+                      Mon profil
+                    </Link>
                     {session.user.role === "ADMIN" || session.user.role === "EDITOR" ? (
                       <Link
                         href="/admin"
@@ -418,29 +461,36 @@ export default function Header() {
           className="flex flex-col gap-1 border-t border-white/5 bg-rd-deep px-6 pb-6 md:hidden"
         >
           <Link
+            href="/"
+            className="py-3 text-sm font-semibold uppercase tracking-wide text-white/50"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Accueil
+          </Link>
+          <Link
             href={getNavLink("#services")}
-            className="border-b border-white/5 py-3 text-white/80 hover:text-white"
+            className="border-b border-white/5 py-3 pl-4 text-white/80 hover:text-white"
             onClick={() => setMobileMenuOpen(false)}
           >
             Services
           </Link>
           <Link
             href={getNavLink("#pourquoi")}
-            className="border-b border-white/5 py-3 text-white/80 hover:text-white"
+            className="border-b border-white/5 py-3 pl-4 text-white/80 hover:text-white"
             onClick={() => setMobileMenuOpen(false)}
           >
             Pourquoi nous
           </Link>
           <Link
             href={getNavLink("#stats")}
-            className="border-b border-white/5 py-3 text-white/80 hover:text-white"
+            className="border-b border-white/5 py-3 pl-4 text-white/80 hover:text-white"
             onClick={() => setMobileMenuOpen(false)}
           >
             Résultats
           </Link>
           <Link
             href={getNavLink("#temoignages")}
-            className="border-b border-white/5 py-3 text-white/80 hover:text-white"
+            className="border-b border-white/5 py-3 pl-4 text-white/80 hover:text-white"
             onClick={() => setMobileMenuOpen(false)}
           >
             Témoignages

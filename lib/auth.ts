@@ -91,16 +91,28 @@ export const authOptions: NextAuthOptions = {
     signIn: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.role = (user as { role?: string }).role ?? 'VISITOR';
       }
+
+      // Mise a jour du profil : on rafraichit le token depuis les valeurs
+      // envoyees par useSession().update() cote client.
+      if (trigger === 'update' && session) {
+        if (typeof session.name === 'string') token.name = session.name;
+        if (typeof session.email === 'string') token.email = session.email;
+        if ('image' in session) token.picture = session.image ?? null;
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub ?? '';
         session.user.role = (token.role as string) ?? 'VISITOR';
+        if (token.name) session.user.name = token.name as string;
+        if (token.email) session.user.email = token.email as string;
+        session.user.image = (token.picture as string | null) ?? null;
       }
       return session;
     },

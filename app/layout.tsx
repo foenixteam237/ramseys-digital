@@ -17,10 +17,43 @@ const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ramseys-digital.vercel.app";
+const siteName = "Ramseys Digital";
+const siteDescription =
+  "Ramseys Digital accompagne les entreprises avec des services informatiques fiables, maintenance, solutions digitales et audit réseau à Maroua, Cameroun.";
+
 export const metadata: Metadata = {
-  title: "Ramseys Digital | Solutions IT & services numériques",
-  description:
-    "Ramseys Digital accompagne les entreprises avec des services informatiques fiables, maintenance, solutions digitales et audit réseau à Maroua, Cameroun.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Ramseys Digital | Solutions IT & services numériques",
+    template: "%s | Ramseys Digital",
+  },
+  description: siteDescription,
+  keywords: [
+    "services informatiques Maroua",
+    "maintenance informatique Cameroun",
+    "audit réseau",
+    "solutions digitales",
+    "Ramseys Digital",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    url: siteUrl,
+    siteName,
+    title: "Ramseys Digital | Solutions IT & services numériques",
+    description: siteDescription,
+    images: [{ url: "/logo.png", width: 1200, height: 630, alt: siteName }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ramseys Digital | Solutions IT & services numériques",
+    description: siteDescription,
+    images: ["/logo.png"],
+  },
   icons: {
     icon: "/icon.svg",
   },
@@ -38,6 +71,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
+      suppressHydrationWarning
       className={`${spaceGrotesk.variable} ${inter.variable} ${jetBrainsMono.variable} h-full antialiased`}
     >
       <head>

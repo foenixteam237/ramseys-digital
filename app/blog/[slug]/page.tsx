@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPostBySlug, getPublishedPosts } from '@/lib/blog';
@@ -12,6 +13,46 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 export const dynamic = 'force-dynamic';
+
+// Metadonnees par article : titre, description et image propres a chaque page
+// (essentiel pour le referencement Google et le partage sur les reseaux/WhatsApp).
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
+
+  if (!post) {
+    return { title: 'Article introuvable' };
+  }
+
+  const url = `/blog/${post.slug}`;
+  const images = post.coverImageUrl ? [{ url: post.coverImageUrl }] : ['/logo.png'];
+
+  return {
+    title: post.title,
+    description: post.excerpt,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'article',
+      title: post.title,
+      description: post.excerpt,
+      url,
+      publishedTime: post.createdAt,
+      modifiedTime: post.updatedAt,
+      authors: [post.authorName],
+      images,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.title,
+      description: post.excerpt,
+      images: post.coverImageUrl ? [post.coverImageUrl] : ['/logo.png'],
+    },
+  };
+}
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -31,8 +72,28 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const readingMinutes = estimateReadingTime(post.content);
   const toc = extractToc(post.content);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.excerpt,
+    image: post.coverImageUrl ? [post.coverImageUrl] : undefined,
+    datePublished: post.createdAt,
+    dateModified: post.updatedAt,
+    author: { '@type': 'Person', name: authorName },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Ramseys Digital',
+      logo: { '@type': 'ImageObject', url: '/logo.png' },
+    },
+  };
+
   return (
     <div className="min-h-screen bg-rd-deep text-white antialiased">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <ViewCounter postId={post.id} />
       <Header />
       <main className="pb-24 pt-32">

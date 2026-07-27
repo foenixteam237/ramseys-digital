@@ -67,6 +67,14 @@ export interface AdminMediaItem {
   createdAt: string;
 }
 
+export interface AdminVideo {
+  id: string;
+  youtubeId: string;
+  title: string | null;
+  thumbnailUrl: string;
+  createdAt: string;
+}
+
 export interface AdminPageItem {
   id: string;
   title: string;
@@ -285,6 +293,30 @@ export async function getAllMedia(uploadedBy?: string): Promise<AdminMediaItem[]
     url: item.url,
     sizeBytes: item.size_bytes,
     createdAt: item.created_at,
+  }));
+}
+
+export async function getFeaturedVideos(): Promise<AdminVideo[]> {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data, error } = await supabase
+    .from('featured_videos')
+    .select('id, youtube_id, title, created_at')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('getFeaturedVideos error:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map((video) => ({
+    id: video.id,
+    youtubeId: video.youtube_id,
+    title: video.title ?? null,
+    thumbnailUrl: `https://i.ytimg.com/vi/${video.youtube_id}/hqdefault.jpg`,
+    createdAt: video.created_at,
   }));
 }
 

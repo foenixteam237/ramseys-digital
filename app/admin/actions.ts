@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/session';
 import { createClient } from '@/utils/supabase/server';
+import { parseYoutubeId } from '@/lib/youtube';
 import {
   sendEmail,
   buildNewPostEmail,
@@ -646,6 +647,51 @@ export async function uploadImageAction(formData: FormData): Promise<{ url: stri
   revalidatePath('/admin');
 
   return { url: publicUrlData.publicUrl };
+}
+
+// Videos mises en avant sur la page d'accueil (gerees par l'admin).
+export async function addFeaturedVideoAction(formData: FormData) {
+  const user = await requireAdmin();
+
+  const rawUrl = String(formData.get('url') ?? '').trim();
+  const title = String(formData.get('title') ?? '').trim();
+
+  const youtubeId = parseYoutubeId(rawUrl);
+  if (!youtubeId) {
+    throw new Error('Lien YouTube invalide. Collez l’URL complète de la vidéo.');
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase.from('featured_videos').insert({
+    youtube_id: youtubeId,
+    title: title || null,
+    created_by: user.id,
+  });
+
+  if (error) {
+    throw new Error(`Impossible d’ajouter la vidéo : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/');
+}
+
+export async function deleteFeaturedVideoAction(videoId: string) {
+  await requireAdmin();
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase.from('featured_videos').delete().eq('id', videoId);
+
+  if (error) {
+    throw new Error(`Impossible de supprimer la vidéo : ${error.message}`);
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/');
 }
 
 const pageSchema = z.object({

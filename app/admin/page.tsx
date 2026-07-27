@@ -8,6 +8,7 @@ import {
   getCategoryRequests,
   getAllMedia,
   getAllPages,
+  getFeaturedVideos,
 } from '@/lib/admin';
 import AdminDashboard from './AdminDashboard';
 
@@ -24,7 +25,7 @@ export default async function AdminPage() {
   // Un EDITOR ne voit que ses propres articles et médias.
   const authorFilter = isAdmin ? undefined : user.id;
 
-  const [posts, users, comments, categories, categoryRequests, media, pages] = await Promise.all([
+  const [posts, users, comments, categories, categoryRequests, media, pages, videos] = await Promise.all([
     getAllPostsForAdmin(authorFilter),
     isAdmin ? getAllUsers() : Promise.resolve([]),
     isAdmin ? getAllCommentsForAdmin() : Promise.resolve([]),
@@ -34,6 +35,8 @@ export default async function AdminPage() {
     getCategoryRequests(authorFilter),
     getAllMedia(authorFilter),
     isAdmin ? getAllPages() : Promise.resolve([]),
+    // Videos mises en avant (page d'accueil) : gerees par l'admin uniquement.
+    isAdmin ? getFeaturedVideos() : Promise.resolve([]),
   ]);
 
   return (
@@ -45,6 +48,7 @@ export default async function AdminPage() {
       initialCategoryRequests={categoryRequests}
       initialMedia={media}
       initialPages={pages}
+      initialVideos={videos}
       currentUserId={user.id}
       currentUserName={user.name ?? 'Utilisateur'}
       currentUserRole={user.role}
